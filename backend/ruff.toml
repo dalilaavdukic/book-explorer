@@ -1,0 +1,6 @@
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP", "DJ"]
+# The formatter owns line length; E501 would only flag strings it can't split.
+ignore = ["E501"]
