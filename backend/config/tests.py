@@ -26,12 +26,23 @@ class ApiDefaultsTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_form_encoded_body_is_rejected(self):
-        request = self.factory.post("/", {"body": "text"}, format="multipart")
+    def test_bodies_an_html_form_can_send_are_rejected(self):
+        form_bodies = {
+            "application/x-www-form-urlencoded": "body=text",
+            "multipart/form-data; boundary=x": (
+                '--x\r\nContent-Disposition: form-data; name="body"\r\n\r\ntext\r\n--x--'
+            ),
+            "text/plain": "body=text",
+        }
+        for content_type, body in form_bodies.items():
+            with self.subTest(content_type=content_type):
+                request = self.factory.post("/", body, content_type=content_type)
 
-        response = PublicEchoView.as_view()(request)
+                response = PublicEchoView.as_view()(request)
 
-        self.assertEqual(response.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+                self.assertEqual(
+                    response.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+                )
 
     def test_json_body_is_accepted(self):
         request = self.factory.post("/", {"body": "text"}, format="json")
