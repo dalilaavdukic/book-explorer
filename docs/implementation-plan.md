@@ -1,6 +1,6 @@
 # Book Explorer: Implementation Plan
 
-*Living document, last updated 2026-10-10 (Phase 0D). Employer requirements: `Development_Take-Home_Assignment.md`. Product requirements: `docs/spec.md`. Technical design: `docs/architecture.md`.*
+*Living document, last updated 2026-10-10 (Phase 1). Employer requirements: `Development_Take-Home_Assignment.md`. Product requirements: `docs/spec.md`. Technical design: `docs/architecture.md`.*
 
 ## 1. Purpose and how this plan is used
 
@@ -39,7 +39,7 @@ The checkpoint isn't a separate phase. It has no detailed plan or formal approva
 | 0B Technical architecture (`docs/architecture.md`) | Approved 2026-10-10 |
 | 0C Implementation roadmap (this document) | Approved 2026-10-10 |
 | 0D Project instructions (`CLAUDE.md`) | Approved 2026-10-10 |
-| 1 Foundation | Not started |
+| 1 Foundation | In progress |
 | 2 Book discovery | Not started |
 | 3 Authentication | Not started |
 | 4 User-specific notes | Not started |
@@ -723,16 +723,17 @@ Every journey is walked through end to end in Phase 6.
 | D3 | Enhancements are an optional step in Phase 6, after the core checklist passes and the core is tagged. AC-X2 comes before AC-X1. | A submittable core exists before any optional work. AC-X1 goes last because it changes the private-data boundary. |
 | D4 | In each phase and in the Phase 6 checklist, Claude Code verifies the applicable user-facing acceptance criteria through Playwright MCP whenever technically possible, and records the results. The user also tests by hand, especially usability, visual polish and scenarios flagged as not reliably verifiable by automation. A tooling limitation is flagged, never treated as a blocker. | User-facing behaviour is checked in a real browser without maintaining an end-to-end suite, and people cover what automation can't judge |
 | D5 | Playwright MCP is configured at local scope, outside the repository | The repository and reviewer setup stay unchanged |
+| D6 | Each phase is built on its own branch (`phase-N-<name>`) with a pull request that runs CI. After the phase is approved, `main` is fast-forwarded to the branch, never squashed. | The user reviews each phase's diff on GitHub, `main` only ever holds approved phases, and every commit on it is one CI tested |
 
 ## 10. Deferred to phase planning
 
 Left open on purpose. Each item is decided in the detailed plan for the phase named.
 
 - **Phase 0D:** how the commit and code-style rules (§2) are enforced. Decided; see §2.
-- **Phase 1:**
-  - exact versions, including the Node version
-  - the Playwright MCP version and browser
-  - what is committed besides code, such as the assignment text and the Phase 0 working notes
+- **Phase 1:** settled.
+  - Exact versions, including Node, are recorded in architecture §10.
+  - Playwright MCP is `@playwright/mcp` 0.0.83, driving the system Google Chrome with an isolated profile.
+  - Nothing besides code and the docs is committed. The employer's brief and the Phase 0 working notes stay out of the repository; the docs cite the brief by filename.
 - **Phase 2:**
   - the seed book list and the source it is checked against
   - whether the seed data sits inline in the migration or in a frozen module beside it
