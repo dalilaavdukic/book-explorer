@@ -46,7 +46,16 @@ function recordPosts(path: string, response: () => Response) {
   const requests: Request[] = [];
   server.use(
     http.post(path, ({ request }) => {
-      requests.push(request.clone());
+      console.log("CI-DEBUG handler hit:", request.method, request.url, {
+        bodyUsed: request.bodyUsed,
+        locked: request.body?.locked,
+      });
+      try {
+        requests.push(request.clone());
+      } catch (error) {
+        console.log("CI-DEBUG clone threw:", error);
+        throw error;
+      }
       return response();
     }),
   );

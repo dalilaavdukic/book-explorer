@@ -32,6 +32,17 @@ function LoginForm() {
     gcTime: 0,
     // The page redirects once the session has a reader.
     onSuccess: (session) => changeSession(client, session.user),
+    onError: (err) => {
+      console.error(
+        "CI-DEBUG login error:",
+        err.name,
+        err.message,
+        err instanceof ApiError
+          ? JSON.stringify(err.body)
+          : String((err as Error & { cause?: unknown }).cause),
+        err.stack,
+      );
+    },
   });
 
   const canSubmit = username.trim() !== "" && password !== "" && !isPending;

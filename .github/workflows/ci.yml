@@ -50,6 +50,12 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm run build
+      - name: CI-DEBUG repeat the suite
+        run: |
+          for i in $(seq 1 8); do
+            echo "=== CI-DEBUG run $i ==="
+            npx vitest run --silent=false || true
+          done
       - run: npm test
       - name: Check the generated types match the OpenAPI schema
         run: |
