@@ -467,6 +467,7 @@ Each spec need below is met by TanStack Query rather than custom code:
 
 - **A 4xx response is never retried.** It won't change on a second try, and TanStack's default of three retries with backoff would hold "Book not found" and "This page doesn't exist" behind about 7 seconds of loading. A network error or a 5xx is retried once; the Retry button covers the rest.
 - **A query that failed with a 4xx isn't refetched when the tab regains focus.** A query without data shows its loading state again while it refetches, so a "not found" view would turn back into "Loading…" every time the reader returns to the tab. Every other query keeps TanStack's refetch on focus. The session query sets its own focus policy (§8.5).
+- **A view that has data keeps showing it when a background refetch fails.** The error state appears only when there's nothing to show, so a failed refetch on tab focus can't unmount the book page and an open note form with it. A 404 still shows "Book not found".
 
 Hand-written `useEffect` fetching was rejected because it would mean writing request cancellation, race protection, caching and refetching ourselves, all of which are easy to get wrong. React Router loaders were rejected because they have no cache, would make every search pause a navigation, and fit inline note editing poorly.
 

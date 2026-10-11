@@ -18,7 +18,7 @@ export default function BookDetailPage() {
 }
 
 function BookDetail({ id }: { id: number }) {
-  const { data: book, error, isPending, isError, refetch } = useBook(id);
+  const { data: book, error, isError, refetch } = useBook(id);
   const listSearch = useListSearch();
 
   if (isError && error instanceof ApiError && error.status === 404) {
@@ -26,14 +26,16 @@ function BookDetail({ id }: { id: number }) {
   }
 
   let content;
-  if (isPending) {
-    content = <LoadingState label="Loading book…" />;
-  } else if (isError) {
-    content = (
+  // A failed background refetch keeps the book on screen, and with it any
+  // open note form.
+  if (book === undefined) {
+    content = isError ? (
       <ErrorState
         message="The book couldn't be loaded."
         onRetry={() => void refetch()}
       />
+    ) : (
+      <LoadingState label="Loading book…" />
     );
   } else {
     content = (
