@@ -34,7 +34,7 @@ function Account({ user }: { user: User }) {
   const { mutate, isPending, isError } = useMutation({
     mutationFn: logout,
     // Only once the server has ended the session (AC-A5).
-    onSuccess: () => changeSession(client, null),
+    onSuccess: () => changeSession(client, null, { loggedOutHere: true }),
   });
 
   return (
