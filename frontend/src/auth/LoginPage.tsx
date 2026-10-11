@@ -27,6 +27,9 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const { mutate, isPending, error } = useMutation({
     mutationFn: login,
+    // The finished mutation keeps the password in its variables; drop it at
+    // once so it doesn't outlive the form on a shared browser (arch §6.8).
+    gcTime: 0,
     // The page redirects once the session has a reader.
     onSuccess: (session) => changeSession(client, session.user),
   });
