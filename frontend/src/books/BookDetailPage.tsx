@@ -32,7 +32,7 @@ function BookDetail({ id }: { id: number }) {
     content = (
       <ErrorState
         message="The book couldn't be loaded."
-        onRetry={() => refetch()}
+        onRetry={() => void refetch()}
       />
     );
   } else {
@@ -68,7 +68,10 @@ function BookDetail({ id }: { id: number }) {
 // The list links pass their search string as router state, so "Back to books"
 // returns to the same page. Opened directly, there's none: go to the first page.
 function useListSearch() {
-  const { state } = useLocation();
-  const listSearch: unknown = state?.listSearch;
+  const state: unknown = useLocation().state;
+  const listSearch =
+    typeof state === "object" && state !== null && "listSearch" in state
+      ? state.listSearch
+      : undefined;
   return typeof listSearch === "string" ? listSearch : "";
 }

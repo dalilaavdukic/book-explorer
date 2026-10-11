@@ -15,10 +15,11 @@ python3.12 -m venv .venv         # Windows: py -3.12 -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.txt
 python manage.py migrate
+python manage.py create_demo_users
 python manage.py runserver
 ```
 
-To create an administrator account for Django admin, run `python manage.py createsuperuser`.
+`create_demo_users` creates the two demo readers described in [Users](#users).
 
 **Dependencies** are managed with pip:
 - `requirements.txt` pins every runtime package to an exact version, including sub-dependencies.
@@ -47,7 +48,7 @@ npm run dev
 
 1. Start the backend with `python manage.py runserver`. It runs on port 8000.
 2. In a second terminal, start the frontend with `npm run dev`. It runs on port 5173.
-3. Open **http://localhost:5173**.
+3. Open **http://localhost:5173** and log in as `alice` (password `alice-password`), or browse the catalog without logging in.
 
 The Vite dev server forwards `/api`, `/admin` and `/static` to Django, so the whole app is served from one origin:
 
@@ -57,6 +58,23 @@ The Vite dev server forwards `/api`, `/admin` and `/static` to Django, so the wh
 | http://localhost:5173/api/docs/ | API documentation (Swagger UI) |
 | http://localhost:5173/api/schema/ | OpenAPI schema |
 | http://localhost:5173/admin/ | Django admin |
+
+## Users
+
+**Demo readers.** `python manage.py create_demo_users`, run in `backend/`, creates two readers for trying the app:
+
+| Username | Password |
+|---|---|
+| `alice` | `alice-password` |
+| `bob` | `bob-password` |
+
+- It creates only the users that are missing, so running it again is harmless.
+- It never changes an existing user. A user with one of these names is left as it is, password included, and reported as skipped.
+- Both are ordinary readers. They can't use Django admin.
+
+> **Development and review only.** These credentials are public. Never run this command on a production database or create these users there.
+
+**Administrators.** No migration or command creates an administrator. To use Django admin, create one with `python manage.py createsuperuser`.
 
 ## Seed data
 
@@ -121,6 +139,8 @@ cd ../frontend && npm run generate:types
 ```
 
 CI regenerates both files and fails if either differs from the committed version.
+
+**Swagger UI** at `/api/docs/` uses the browser's session, so log in through the app first to try endpoints that need a login. If you log in through Swagger UI itself instead, reload the page before sending another POST, PATCH or DELETE: logging in issues a new CSRF token, and the page keeps sending the one it loaded with.
 
 ## Repository layout
 

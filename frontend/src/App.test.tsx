@@ -2,6 +2,7 @@ import { focusManager } from "@tanstack/react-query";
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { expect, onTestFinished, test, vi } from "vitest";
+import type { Session, User } from "./api/auth.ts";
 import type { Book, BookDetail, PaginatedBookList } from "./api/books.ts";
 import { renderApp } from "./test/renderApp.tsx";
 import { server } from "./test/server.ts";
@@ -18,6 +19,8 @@ const nineteenEightyFourDetail: BookDetail = {
   ...nineteenEightyFour,
   description: "A party worker risks everything on a quiet rebellion.",
 };
+
+const alice: User = { id: 1, username: "alice" };
 
 function serveBook(book: BookDetail) {
   server.use(http.get(`/api/books/${book.id}/`, () => HttpResponse.json(book)));
@@ -39,22 +42,45 @@ function serveBooks(results: Book[], count = results.length) {
   return requests;
 }
 
-function spyOnFetch() {
-  const spy = vi.spyOn(globalThis, "fetch");
-  onTestFinished(() => spy.mockRestore());
-  return spy;
+function recordPosts(path: string, response: () => Response) {
+  const requests: Request[] = [];
+  server.use(
+    http.post(path, ({ request }) => {
+      requests.push(request.clone());
+      return response();
+    }),
+  );
+  return requests;
 }
 
-test("an unknown route shows Page not found with a link to the catalog", () => {
+function setCsrfCookie(value: string) {
+  document.cookie = `csrftoken=${value}; path=/`;
+  onTestFinished(() => {
+    document.cookie = "csrftoken=; path=/; max-age=0";
+  });
+}
+
+// Counts catalog requests only: the app also checks the session at startup and
+// whenever the tab regains focus.
+function spyOnBookRequests() {
+  const spy = vi.spyOn(globalThis, "fetch");
+  onTestFinished(() => spy.mockRestore());
+  return () =>
+    spy.mock.calls.filter(
+      ([input]) => typeof input === "string" && input.startsWith("/api/books/"),
+    );
+}
+
+test("an unknown route shows Page not found with a link to the catalog", async () => {
   renderApp("/nope");
 
+  expect(
+    await screen.findByRole("heading", { name: "Page not found" }),
+  ).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Book Explorer" })).toHaveAttribute(
     "href",
     "/",
   );
-  expect(
-    screen.getByRole("heading", { name: "Page not found" }),
-  ).toBeInTheDocument();
   expect(
     screen.getByRole("link", { name: "Back to the catalog" }),
   ).toHaveAttribute("href", "/");
@@ -93,18 +119,18 @@ test("a page past the last one shows This page doesn't exist", async () => {
   ).toHaveAttribute("href", "/");
 });
 
-test("a malformed page shows the same view without calling the API", () => {
-  const fetchSpy = spyOnFetch();
+test("a malformed page shows the same view without calling the API", async () => {
+  const bookRequests = spyOnBookRequests();
 
   renderApp("/?page=abc&utm_source=mail");
 
   expect(
-    screen.getByRole("heading", { name: "This page doesn't exist" }),
+    await screen.findByRole("heading", { name: "This page doesn't exist" }),
   ).toBeInTheDocument();
   expect(
     screen.getByRole("link", { name: "Go to the first page" }),
   ).toHaveAttribute("href", "/?utm_source=mail");
-  expect(fetchSpy).not.toHaveBeenCalled();
+  expect(bookRequests()).toEqual([]);
 });
 
 test("an empty page parameter means page 1", async () => {
@@ -118,19 +144,19 @@ test("an empty page parameter means page 1", async () => {
   expect(requests.map((params) => params.get("page"))).toEqual(["1"]);
 });
 
-test("a malformed book id shows Book not found without calling the API", () => {
-  const fetchSpy = spyOnFetch();
+test("a malformed book id shows Book not found without calling the API", async () => {
+  const bookRequests = spyOnBookRequests();
 
   renderApp("/books/abc");
 
   expect(
-    screen.getByRole("heading", { name: "Book not found" }),
+    await screen.findByRole("heading", { name: "Book not found" }),
   ).toBeInTheDocument();
-  expect(fetchSpy).not.toHaveBeenCalled();
+  expect(bookRequests()).toEqual([]);
 });
 
 test("Book not found isn't refetched when the tab regains focus", async () => {
-  const fetchSpy = spyOnFetch();
+  const bookRequests = spyOnBookRequests();
   onTestFinished(() => focusManager.setFocused(undefined));
   server.use(
     http.get("/api/books/999/", () =>
@@ -140,6 +166,8 @@ test("Book not found isn't refetched when the tab regains focus", async () => {
   renderApp("/books/999");
   await screen.findByRole("heading", { name: "Book not found" });
 
+  // The focus listener refetches after awaiting, so act must wait for it.
+  // eslint-disable-next-line @typescript-eslint/require-await
   await act(async () => {
     focusManager.setFocused(false);
     focusManager.setFocused(true);
@@ -148,7 +176,7 @@ test("Book not found isn't refetched when the tab regains focus", async () => {
   expect(
     screen.getByRole("heading", { name: "Book not found" }),
   ).toBeInTheDocument();
-  expect(fetchSpy).toHaveBeenCalledOnce();
+  expect(bookRequests()).toHaveLength(1);
 });
 
 test("a book opened directly shows every attribute and links to the first page", async () => {
@@ -199,4 +227,122 @@ test("Back to books returns to the list page the book was opened from", async ()
     "/?page=3",
   );
   expect(scrollTo).toHaveBeenCalledWith(0, 0);
+});
+
+test("until the session is known, the app shows only its loading state", async () => {
+  renderApp("/", { user: alice, holdSession: true });
+
+  expect(await screen.findByRole("status")).toHaveTextContent("Loading…");
+  expect(screen.queryByRole("link", { name: "Log in" })).toBeNull();
+  expect(screen.queryByText("alice")).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Books" })).toBeNull();
+});
+
+test("logging in from a book returns to it, with the reader in the header", async () => {
+  const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+  onTestFinished(() => scrollTo.mockRestore());
+  setCsrfCookie("the-token");
+  serveBook(nineteenEightyFourDetail);
+  const logins = recordPosts("/api/auth/login/", () =>
+    HttpResponse.json<Session>({ user: alice }),
+  );
+  renderApp("/books/7");
+
+  // Leave only once the book has loaded. With MSW 3 under Node, a request
+  // aborted mid-flight can make the next POST bypass MSW and reach the network.
+  await screen.findByRole("heading", {
+    level: 1,
+    name: "Nineteen Eighty-Four",
+  });
+  fireEvent.click(screen.getByRole("link", { name: "Log in" }));
+  fireEvent.change(await screen.findByLabelText("Username"), {
+    target: { value: "alice" },
+  });
+  fireEvent.change(screen.getByLabelText("Password"), {
+    target: { value: "alice-password" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Log in" }));
+
+  expect(
+    await screen.findByRole("heading", {
+      level: 1,
+      name: "Nineteen Eighty-Four",
+    }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("alice")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Log out" })).toBeInTheDocument();
+  expect(logins.map((request) => request.headers.get("X-CSRFToken"))).toEqual([
+    "the-token",
+  ]);
+  expect(await logins[0].json()).toEqual({
+    username: "alice",
+    password: "alice-password",
+  });
+});
+
+test("the login page sends a reader who is already logged in to the catalog", async () => {
+  serveBooks([nineteenEightyFour]);
+
+  renderApp("/login", { user: alice });
+
+  expect(
+    await screen.findByRole("heading", { name: "Books" }),
+  ).toBeInTheDocument();
+  expect(screen.queryByLabelText("Username")).toBeNull();
+});
+
+test("a 401 shows the reader as logged out without leaving the page", async () => {
+  server.use(
+    http.get("/api/books/", () =>
+      HttpResponse.json(
+        { detail: "Authentication credentials were not provided." },
+        { status: 401 },
+      ),
+    ),
+  );
+
+  renderApp("/?page=2", { user: alice });
+
+  expect(
+    await screen.findByRole("link", { name: "Log in" }),
+  ).toBeInTheDocument();
+  expect(screen.queryByText("alice")).toBeNull();
+  expect(screen.getByRole("heading", { name: "Books" })).toBeInTheDocument();
+});
+
+test("logging out sends the CSRF token and shows Log in", async () => {
+  setCsrfCookie("the-token");
+  serveBooks([nineteenEightyFour]);
+  const logouts = recordPosts(
+    "/api/auth/logout/",
+    () => new HttpResponse(null, { status: 204 }),
+  );
+  renderApp("/", { user: alice });
+
+  fireEvent.click(await screen.findByRole("button", { name: "Log out" }));
+
+  expect(
+    await screen.findByRole("link", { name: "Log in" }),
+  ).toBeInTheDocument();
+  expect(screen.queryByText("alice")).toBeNull();
+  expect(logouts.map((request) => request.headers.get("X-CSRFToken"))).toEqual([
+    "the-token",
+  ]);
+});
+
+test("a failed logout keeps the reader logged in and says so", async () => {
+  serveBooks([nineteenEightyFour]);
+  recordPosts("/api/auth/logout/", () =>
+    HttpResponse.json({ detail: "Server error." }, { status: 500 }),
+  );
+  renderApp("/", { user: alice });
+
+  fireEvent.click(await screen.findByRole("button", { name: "Log out" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Couldn't log out. Please try again.",
+  );
+  expect(screen.getByText("alice")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Log out" })).toBeEnabled();
+  expect(screen.queryByRole("link", { name: "Log in" })).toBeNull();
 });

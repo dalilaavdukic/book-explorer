@@ -24,7 +24,8 @@ class ApiDefaultsTests(APITestCase):
     def test_view_without_a_permission_override_rejects_visitors(self):
         response = DefaultView.as_view()(self.factory.get("/"))
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response["WWW-Authenticate"], "Session")
 
     def test_bodies_an_html_form_can_send_are_rejected(self):
         form_bodies = {

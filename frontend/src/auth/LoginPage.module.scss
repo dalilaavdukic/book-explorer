@@ -1,0 +1,38 @@
+@use "../styles/variables" as *;
+
+.login {
+  max-width: 22rem;
+  margin: 0 auto;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  font-weight: 600;
+
+  input {
+    font: inherit;
+    font-weight: normal;
+    padding: $space-2 $space-3;
+    color: $color-text;
+    background: $color-background;
+    border: 1px solid $color-border;
+    border-radius: $radius;
+  }
+}
+
+.error {
+  margin: 0;
+  color: $color-danger;
+}
+
+.submit {
+  align-self: flex-start;
+}

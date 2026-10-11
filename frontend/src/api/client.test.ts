@@ -1,7 +1,25 @@
 import { delay, http, HttpResponse } from "msw";
-import { expect, test } from "vitest";
+import { expect, onTestFinished, test } from "vitest";
 import { server } from "../test/server.ts";
-import { ApiError, apiGet, NetworkError } from "./client.ts";
+import { ApiError, apiGet, apiSend, NetworkError } from "./client.ts";
+
+function setCsrfCookie(value: string) {
+  document.cookie = `csrftoken=${value}; path=/`;
+  onTestFinished(() => {
+    document.cookie = "csrftoken=; path=/; max-age=0";
+  });
+}
+
+function recordRequests(path: string) {
+  const requests: Request[] = [];
+  server.use(
+    http.all(path, ({ request }) => {
+      requests.push(request.clone());
+      return new HttpResponse(null, { status: 204 });
+    }),
+  );
+  return requests;
+}
 
 test("returns the JSON body and encodes query parameters", async () => {
   let search = "";
@@ -70,4 +88,45 @@ test("an aborted request rejects with the abort error, not a NetworkError", asyn
 
   expect(error).not.toBeInstanceOf(NetworkError);
   expect(error).toMatchObject({ name: "AbortError" });
+});
+
+test.each(["POST", "PATCH", "DELETE"] as const)(
+  "%s sends the CSRF cookie's current value as X-CSRFToken",
+  async (method) => {
+    const requests = recordRequests("/api/things/1/");
+
+    setCsrfCookie("first-token");
+    await apiSend(method, "/api/things/1/");
+    setCsrfCookie("second-token");
+    await apiSend(method, "/api/things/1/");
+
+    expect(requests.map((request) => request.method)).toEqual([method, method]);
+    expect(
+      requests.map((request) => request.headers.get("X-CSRFToken")),
+    ).toEqual(["first-token", "second-token"]);
+  },
+);
+
+test("GET sends no CSRF token", async () => {
+  const requests = recordRequests("/api/things/1/");
+  setCsrfCookie("a-token");
+
+  await apiGet("/api/things/1/");
+
+  expect(requests[0].headers.get("X-CSRFToken")).toBeNull();
+});
+
+test("a body is sent as JSON", async () => {
+  const requests = recordRequests("/api/things/");
+
+  await apiSend("POST", "/api/things/", { body: { text: "café" } });
+
+  expect(requests[0].headers.get("Content-Type")).toBe("application/json");
+  expect(await requests[0].json()).toEqual({ text: "café" });
+});
+
+test("a 204 resolves to undefined", async () => {
+  recordRequests("/api/things/1/");
+
+  await expect(apiSend("DELETE", "/api/things/1/")).resolves.toBeUndefined();
 });

@@ -6,6 +6,11 @@
 }
 
 .inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-3;
+  align-items: center;
+  justify-content: space-between;
   max-width: $content-width;
   margin: 0 auto;
   padding: $space-3 $space-4;
@@ -16,4 +21,23 @@
   font-weight: 700;
   color: $color-text;
   text-decoration: none;
+}
+
+.account {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-3;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.username {
+  font-weight: 600;
+}
+
+.error {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: right;
+  color: $color-danger;
 }

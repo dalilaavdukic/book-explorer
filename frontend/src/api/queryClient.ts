@@ -1,4 +1,5 @@
-import { QueryClient } from "@tanstack/react-query";
+import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
+import { changeSession } from "../auth/session.ts";
 import { ApiError } from "./client.ts";
 
 function isClientError(error: Error | null) {
@@ -15,7 +16,17 @@ function retryOnce(failureCount: number, error: Error) {
 }
 
 export function createQueryClient() {
-  return new QueryClient({
+  // Any 401 means the reader is logged out. Nothing navigates: each view
+  // switches to its logged-out state.
+  const logOutOn401 = (error: Error) => {
+    if (error instanceof ApiError && error.status === 401) {
+      changeSession(client, null);
+    }
+  };
+
+  const client = new QueryClient({
+    queryCache: new QueryCache({ onError: logOutOn401 }),
+    mutationCache: new MutationCache({ onError: logOutOn401 }),
     defaultOptions: {
       queries: {
         retry: retryOnce,
@@ -25,4 +36,5 @@ export function createQueryClient() {
       },
     },
   });
+  return client;
 }
