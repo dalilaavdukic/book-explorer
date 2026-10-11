@@ -132,12 +132,17 @@ class LoginTests(AuthTestCase):
 class CsrfTests(AuthTestCase):
     def test_login_without_the_token_is_refused_before_checking_credentials(self):
         self.csrf_token()
+        cases = {
+            "valid credentials": CREDENTIALS,
+            "wrong password": {"username": "alice", "password": "wrong-password"},
+        }
+        for case, credentials in cases.items():
+            with self.subTest(case):
+                response = self.client.post(LOGIN_URL, credentials, format="json")
 
-        response = self.client.post(LOGIN_URL, CREDENTIALS, format="json")
-
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertTrue(response.json()["detail"].startswith("CSRF Failed"))
-        self.assertIsNone(self.session_user())
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+                self.assertTrue(response.json()["detail"].startswith("CSRF Failed"))
+                self.assertIsNone(self.session_user())
 
     def test_logout_without_the_token_is_refused_for_a_visitor(self):
         self.csrf_token()
