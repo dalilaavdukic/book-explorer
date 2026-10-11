@@ -3,6 +3,7 @@ import { ApiError } from "../api/client.ts";
 import ErrorState from "../components/ErrorState.tsx";
 import LoadingState from "../components/LoadingState.tsx";
 import NotFound from "../components/NotFound.tsx";
+import NotesSection from "../notes/NotesSection.tsx";
 import styles from "./BookDetailPage.module.scss";
 import { parsePositiveInteger } from "./parsePositiveInteger.ts";
 import { useBook } from "./queries.ts";
@@ -39,21 +40,24 @@ function BookDetail({ id }: { id: number }) {
     );
   } else {
     content = (
-      <article className={styles.book}>
-        <h1 className={styles.title}>{book.title}</h1>
-        <p className={styles.author}>by {book.author.name}</p>
-        <dl className={styles.facts}>
-          <div>
-            <dt>Published</dt>
-            <dd>{book.publication_year}</dd>
-          </div>
-          <div>
-            <dt>Genre</dt>
-            <dd>{book.genre.name}</dd>
-          </div>
-        </dl>
-        <p className={styles.description}>{book.description}</p>
-      </article>
+      <>
+        <article className={styles.book}>
+          <h1 className={styles.title}>{book.title}</h1>
+          <p className={styles.author}>by {book.author.name}</p>
+          <dl className={styles.facts}>
+            <div>
+              <dt>Published</dt>
+              <dd>{book.publication_year}</dd>
+            </div>
+            <div>
+              <dt>Genre</dt>
+              <dd>{book.genre.name}</dd>
+            </div>
+          </dl>
+          <p className={styles.description}>{book.description}</p>
+        </article>
+        <NotesSection bookId={id} />
+      </>
     );
   }
 

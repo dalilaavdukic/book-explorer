@@ -10,6 +10,7 @@ import { http, HttpResponse } from "msw";
 import { expect, onTestFinished, test, vi } from "vitest";
 import type { Session, User } from "./api/auth.ts";
 import type { Book, BookDetail, PaginatedBookList } from "./api/books.ts";
+import { serveNotes } from "./test/notesApi.ts";
 import { renderApp } from "./test/renderApp.tsx";
 import { server } from "./test/server.ts";
 
@@ -277,6 +278,7 @@ test("logging in from a book returns to it, with the reader in the header", asyn
   onTestFinished(() => scrollTo.mockRestore());
   setCsrfCookie("the-token");
   serveBook(nineteenEightyFourDetail);
+  serveNotes(7);
   const logins = recordPosts("/api/auth/login/", () =>
     HttpResponse.json<Session>({ user: alice }),
   );

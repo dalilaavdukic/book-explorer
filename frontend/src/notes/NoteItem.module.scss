@@ -1,0 +1,23 @@
+@use "../styles/variables" as *;
+
+.note {
+  padding: $space-3 $space-4;
+  border: 1px solid $color-border;
+  border-radius: $radius;
+}
+
+.body {
+  margin: 0;
+  // Keeps the reader's line breaks, and wraps long words.
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-3;
+  margin: $space-2 0 0;
+  font-size: 0.85rem;
+  color: $color-muted;
+}

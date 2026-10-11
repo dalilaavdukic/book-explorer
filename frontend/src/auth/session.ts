@@ -81,7 +81,7 @@ export function useAuth() {
 
 /** Changes whenever the session function discards note drafts. */
 export function useDraftsVersion() {
-  const { data = 0 } = useQuery({
+  const { data = 0 } = useQuery<number>({
     queryKey: draftsKey,
     queryFn: skipToken,
     staleTime: Infinity,

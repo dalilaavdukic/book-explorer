@@ -1,0 +1,45 @@
+@use "../styles/variables" as *;
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+
+  label {
+    font-weight: 600;
+  }
+
+  textarea,
+  input {
+    font: inherit;
+    padding: $space-2 $space-3;
+    color: $color-text;
+    background: $color-background;
+    border: 1px solid $color-border;
+    border-radius: $radius;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+}
+
+.page {
+  max-width: 8rem;
+}
+
+.error {
+  margin: 0;
+  color: $color-danger;
+}
+
+.actions {
+  display: flex;
+  gap: $space-2;
+}
