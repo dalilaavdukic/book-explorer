@@ -1,0 +1,42 @@
+@use "../styles/variables" as *;
+
+.back {
+  margin: 0 0 $space-6;
+}
+
+.book {
+  max-width: 44rem;
+}
+
+.title {
+  margin: 0;
+  line-height: 1.2;
+}
+
+.author {
+  margin: $space-2 0 $space-4;
+  font-size: 1.15rem;
+  color: $color-muted;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-8;
+  margin: 0 0 $space-6;
+
+  dt {
+    font-size: 0.85rem;
+    color: $color-muted;
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 600;
+  }
+}
+
+.description {
+  margin: 0;
+  font-size: 1.05rem;
+}

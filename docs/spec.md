@@ -1,6 +1,6 @@
 # Book Explorer: Product Specification
 
-*Living document, last updated 2026-10-10 (Phase 0). Requirements source:* `Development_Take-Home_Assignment.md`*. Technical design:* `docs/architecture.md`*.*
+*Living document, last updated 2026-10-11 (Phase 2). Requirements source:* `Development_Take-Home_Assignment.md`*. Technical design:* `docs/architecture.md`*.*
 
 ## 1. Overview
 
@@ -117,6 +117,10 @@ Approved decisions that interpret or go beyond the assignment. They stay fixed u
   - Each book has exactly one author and one genre.
   - As a guide, roughly 40–50 authors and 10–15 genres. These aren't fixed targets.
 - **Author sort key:** each author has a surname-first sort key such as "Orwell, George" or "García Márquez, Gabriel". The key is set explicitly in the data rather than worked out by splitting names, because splitting fails for compound surnames and single-name authors.
+- **Titles, years and author names:**
+  - Title: the best-known English title.
+  - Year: first publication in the original language, as the source gives it. For a work serialized over several years, the year the complete work had appeared.
+  - Author names: in English, keeping their accents.
 - **Descriptions:** original one-line summaries, never copied from publishers.
 - **Accuracy:** titles, authors and years are checked against a reliable source, not taken unchecked from AI output.
 

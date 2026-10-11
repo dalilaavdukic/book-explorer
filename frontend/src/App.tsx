@@ -1,13 +1,18 @@
 import { Route, Routes } from "react-router-dom";
-import styles from "./App.module.scss";
+import BookDetailPage from "./books/BookDetailPage.tsx";
+import BookListPage from "./books/BookListPage.tsx";
+import Layout from "./components/Layout.tsx";
+import NotFound from "./components/NotFound.tsx";
 
 function App() {
   return (
-    <main className={styles.shell}>
-      <Routes>
-        <Route path="/" element={<h1>Book Explorer</h1>} />
-      </Routes>
-    </main>
+    <Routes>
+      <Route element={<Layout />}>
+        <Route index element={<BookListPage />} />
+        <Route path="books/:id" element={<BookDetailPage />} />
+        <Route path="*" element={<NotFound title="Page not found" />} />
+      </Route>
+    </Routes>
   );
 }
 

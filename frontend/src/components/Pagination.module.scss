@@ -1,0 +1,9 @@
+@use "../styles/variables" as *;
+
+.pagination {
+  display: flex;
+  gap: $space-4;
+  align-items: center;
+  justify-content: center;
+  margin-top: $space-8;
+}

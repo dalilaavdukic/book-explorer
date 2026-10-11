@@ -1,6 +1,6 @@
-@use "./styles/variables" as *;
+@use "../styles/variables" as *;
 
-.shell {
+.main {
   max-width: $content-width;
   margin: 0 auto;
   padding: $space-8 $space-4;
