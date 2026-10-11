@@ -1,6 +1,6 @@
 # Book Explorer: Architecture
 
-*Living document, last updated 2026-10-10 (Phase 1). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
+*Living document, last updated 2026-10-11 (Phase 2). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
 
 ## 1. Purpose and status
 
@@ -119,7 +119,9 @@ Why the model looks like this:
 
 **Seed data migration** (spec §5.2)
 
-- A `RunPython` migration using historical models (AC-M3) creates the authors, genres and 100 books. The data itself is curated and checked in the book-discovery phase.
+- A `RunPython` migration using historical models (AC-M3), `catalog/0002_seed_books.py`, creates the 50 authors, 12 genres and 100 books.
+- **The data is written inline in the migration**, grouped by author so each name and sort key appears once. The file is self-contained and frozen by construction. A migration that fetched its data at migrate time was rejected: it would load different data as the source changed, would need the internet for every `migrate` and test run, and couldn't reliably reverse. The network was used only while curating.
+- **The data was checked against English Wikipedia** on 2026-10-11: each book's article title, plus the author and first-publication year in its infobox. Titles, years and author names follow spec §5.2; the README describes the dataset and the result of the check.
 - Reversing it deletes the seeded books, identified by title and author name. It deletes seeded authors and genres only if no remaining book uses them, so books added through admin are untouched and never block the rollback. Because those authors and genres can survive a rollback, the forward step reuses one that already exists, so migrating forward again works.
 - **Rolling back also removes all notes.** Django's generated notes migration depends on the latest catalog migration, which is the seed. Rolling back the seed therefore first undoes the notes migrations, which drops the notes table: every note is lost, not only those on seeded books (AC-M2, spec §6).
   - **This is not the same as deleting a book.** In the app and in Django admin, `PROTECT` still refuses to delete a book that has notes. A rollback changes the schema instead of deleting rows: the notes table is gone before any book is deleted, so the `PROTECT` rule never comes into play.
@@ -321,6 +323,8 @@ Pagination is chosen per endpoint, not set globally:
 - **Clients choose the page size** with `page_size`, up to 100 on both endpoints. Different screens can request different sizes, so the response doesn't include a page count based on a size fixed on the server.
 - **The frontend always sends its own `page_size`** (12 for books, 20 for notes) and works out the page count as `ceil(count / page_size)`. It never relies on the server default, so the page size is defined in only one place per client.
 - **`page_size` isn't part of the browser URL**, because this UI always shows 12 books per page (spec §5.6) and 20 notes per page (spec §5.5).
+- **An empty `page` or `page_size`** means the default: page 1, or the endpoint's page size.
+- **`page` takes only a number.** DRF also accepts `page=last` by default. That's turned off, because the schema documents `page` as an integer, so `page=last` is out of range like `page=abc`.
 - **A page out of range** (`page=99`, `page=0`, `page=abc`) returns DRF's default 404, `{"detail": "Invalid page."}`, on both endpoints.
   - The book list then shows "This page doesn't exist" with a link to the first page (AC-L4). Silently showing the last page instead was rejected, because the URL would no longer describe what's on screen.
   - The notes section, whose page isn't in the URL, returns to page 1 (§8.7, AC-N13).
@@ -456,6 +460,11 @@ Each spec need below is met by TanStack Query rather than custom code:
 | Note changes appear without a page reload; Save is disabled while saving (AC-N9, AC-N2) | Mutations with a pending state. Then every cached page of that book's notes is marked stale and the visible one refetched, because a create or delete shifts notes between pages (AC-N13). |
 | One place that reacts to a 401 (J9) | Global error hooks on the query and mutation caches |
 | A reader's private data never outlives their session (AC-A8) | Private query keys share one root, so one call cancels and removes them all (§8.5) |
+
+**Retries and refetching.**
+
+- **A 4xx response is never retried.** It won't change on a second try, and TanStack's default of three retries with backoff would hold "Book not found" and "This page doesn't exist" behind about 7 seconds of loading. A network error or a 5xx is retried once; the Retry button covers the rest.
+- **A query that failed with a 4xx isn't refetched when the tab regains focus.** A query without data shows its loading state again while it refetches, so a "not found" view would turn back into "Loading…" every time the reader returns to the tab. Every other query keeps TanStack's refetch on focus, which the session re-check relies on (§8.5).
 
 Hand-written `useEffect` fetching was rejected because it would mean writing request cancellation, race protection, caching and refetching ourselves, all of which are easy to get wrong. React Router loaders were rejected because they have no cache, would make every search pause a navigation, and fit inline note editing poorly.
 
@@ -645,3 +654,12 @@ There are no automated browser end-to-end tests: they would need both servers an
 - **Swagger UI assets:** served locally by drf-spectacular-sidecar (§3).
 - **Sass package:** `sass`, the pure JavaScript build, so there's no native binary. Its optional file watcher's native install script is denied in `package.json` (`allowScripts`); Vite doesn't use the watcher.
 - **Vite proxy `Host` handling:** the browser's `Host` is kept (§6.2).
+
+**Settled during book discovery (Phase 2):**
+- **Versions.** TanStack Query 5.104 and MSW 3.0, pinned in `frontend/package-lock.json`.
+- **Pagination class:** `StrictPageNumberPagination` in `backend/config/pagination.py`, shared by the book list and later the notes list, so it lives in neither app. The book list sets its default of 12 in a small subclass, `BookPagination`.
+  - A `page_size` that isn't a whole number from 1 to 100 gives a 400 (§7.5).
+  - It checks the number of digits before converting, because Python refuses to convert a digit string longer than 4,300 digits, and that error would be a 500 (§7.3).
+  - It turns off `page=last` (§7.4).
+- **Seed data:** inline in the migration, checked against English Wikipedia (§5).
+- **Query retries and refetch on focus:** §8.4.

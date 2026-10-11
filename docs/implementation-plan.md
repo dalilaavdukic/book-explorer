@@ -1,6 +1,6 @@
 # Book Explorer: Implementation Plan
 
-*Living document, last updated 2026-10-11 (Phase 1). Employer requirements: `Development_Take-Home_Assignment.md`. Product requirements: `docs/spec.md`. Technical design: `docs/architecture.md`.*
+*Living document, last updated 2026-10-11 (Phase 2). Employer requirements: `Development_Take-Home_Assignment.md`. Product requirements: `docs/spec.md`. Technical design: `docs/architecture.md`.*
 
 ## 1. Purpose and how this plan is used
 
@@ -40,7 +40,7 @@ The checkpoint isn't a separate phase. It has no detailed plan or formal approva
 | 0C Implementation roadmap (this document) | Approved 2026-10-10 |
 | 0D Project instructions (`CLAUDE.md`) | Approved 2026-10-10 |
 | 1 Foundation | Complete, approved 2026-10-11 |
-| 2 Book discovery | Not started |
+| 2 Book discovery | In progress |
 | 3 Authentication | Not started |
 | 4 User-specific notes | Not started |
 | 5 Search, filtering and sorting | Not started |
@@ -734,9 +734,9 @@ Left open on purpose. Each item is decided in the detailed plan for the phase na
   - Exact versions, including Node, are recorded in architecture §10.
   - Playwright MCP is `@playwright/mcp` 0.0.83, driving the system Google Chrome with an isolated profile.
   - Nothing besides code and the docs is committed. The employer's brief and the Phase 0 working notes stay out of the repository; the docs cite the brief by filename.
-- **Phase 2:**
-  - the seed book list and the source it is checked against
-  - whether the seed data sits inline in the migration or in a frozen module beside it
+- **Phase 2:** settled.
+  - The seed books are checked against English Wikipedia (architecture §5); the README describes the dataset.
+  - The seed data sits inline in the migration (architecture §5).
 - **Every phase:**
   - names of modules, components and hooks below the structure in architecture §8.2
   - wording of UI copy and error messages

@@ -58,6 +58,37 @@ The Vite dev server forwards `/api`, `/admin` and `/static` to Django, so the wh
 | http://localhost:5173/api/schema/ | OpenAPI schema |
 | http://localhost:5173/admin/ | Django admin |
 
+## Seed data
+
+`python manage.py migrate` loads the catalog through a data migration, `backend/catalog/migrations/0002_seed_books.py`, so a new database has a usable catalog straight away. The data is written inline in the migration, so `migrate` never needs the network and always loads the same books. The migration adds catalog data only, never users or notes.
+
+**What it contains:**
+- 100 well-known books by 50 authors, in 12 genres, first published between 1719 (*Robinson Crusoe*) and 2006 (*The Road*).
+- 31 authors have more than one book, up to five (Agatha Christie), so the author filter has something to narrow.
+- The genres: Adventure, Children's, Dystopian, Fantasy, Historical Fiction, Horror, Literary Fiction, Memoir, Mystery, Popular Science, Romance and Science Fiction.
+
+**Conventions:**
+- **Title:** the best-known English title.
+- **Year:** first publication in the original language. For a work serialized over several years, the year the complete work had appeared.
+- **Author:** the name in English, keeping its accents. Each author also has a sort key, set by hand, that puts the surname first: "Orwell, George", "García Márquez, Gabriel", "du Maurier, Daphne", "Le Guin, Ursula K.", or simply "Voltaire". Splitting names automatically gets compound surnames, particles and single names wrong.
+- **Genre:** one per book, chosen editorially. Genres aren't checked against a source.
+- **Description:** a one-line summary written for this project, not copied from a publisher.
+
+**How it was checked.** On 2026-10-11, every title, author and year was compared with English Wikipedia through the MediaWiki API: the book's article title, and the author and first-publication year in the article's infobox. 75 books matched exactly. The other 25 differ in one or both of two accepted ways:
+- the article title has a disambiguator, such as "Dune (novel)"
+- the infobox lists several years, for example a serial and its book edition, or the original and a translation; the seed keeps the year the conventions above give
+
+No author differed. One article without an infobox (*The Sun Also Rises*) was checked against its short description.
+
+**Rolling back and re-applying**, in `backend/`:
+
+```bash
+python manage.py migrate catalog 0001  # remove the seeded books
+python manage.py migrate catalog       # load them again
+```
+
+Rolling back removes the seeded books, and the seeded authors and genres that no remaining book uses. Books added through Django admin are kept, with their authors and genres.
+
 ## Tests and checks
 
 Backend, in `backend/` with the virtual environment active:
