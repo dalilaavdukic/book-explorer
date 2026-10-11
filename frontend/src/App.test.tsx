@@ -2,6 +2,7 @@ import { focusManager } from "@tanstack/react-query";
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { expect, onTestFinished, test, vi } from "vitest";
+import type { Session, User } from "./api/auth.ts";
 import type { Book, BookDetail, PaginatedBookList } from "./api/books.ts";
 import { renderApp } from "./test/renderApp.tsx";
 import { server } from "./test/server.ts";
@@ -18,6 +19,8 @@ const nineteenEightyFourDetail: BookDetail = {
   ...nineteenEightyFour,
   description: "A party worker risks everything on a quiet rebellion.",
 };
+
+const alice: User = { id: 1, username: "alice" };
 
 function serveBook(book: BookDetail) {
   server.use(http.get(`/api/books/${book.id}/`, () => HttpResponse.json(book)));
@@ -37,6 +40,24 @@ function serveBooks(results: Book[], count = results.length) {
     }),
   );
   return requests;
+}
+
+function recordPosts(path: string, response: () => Response) {
+  const requests: Request[] = [];
+  server.use(
+    http.post(path, ({ request }) => {
+      requests.push(request.clone());
+      return response();
+    }),
+  );
+  return requests;
+}
+
+function setCsrfCookie(value: string) {
+  document.cookie = `csrftoken=${value}; path=/`;
+  onTestFinished(() => {
+    document.cookie = "csrftoken=; path=/; max-age=0";
+  });
 }
 
 // Counts catalog requests only: the app also checks the session at startup and
@@ -209,10 +230,113 @@ test("Back to books returns to the list page the book was opened from", async ()
 });
 
 test("until the session is known, the app shows only its loading state", async () => {
-  renderApp("/", { user: { id: 1, username: "alice" }, holdSession: true });
+  renderApp("/", { user: alice, holdSession: true });
 
   expect(await screen.findByRole("status")).toHaveTextContent("Loading…");
   expect(screen.queryByRole("link", { name: "Log in" })).toBeNull();
   expect(screen.queryByText("alice")).toBeNull();
   expect(screen.queryByRole("heading", { name: "Books" })).toBeNull();
+});
+
+test("logging in from a book returns to it, with the reader in the header", async () => {
+  const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+  onTestFinished(() => scrollTo.mockRestore());
+  setCsrfCookie("the-token");
+  serveBook(nineteenEightyFourDetail);
+  const logins = recordPosts("/api/auth/login/", () =>
+    HttpResponse.json<Session>({ user: alice }),
+  );
+  renderApp("/books/7");
+
+  fireEvent.click(await screen.findByRole("link", { name: "Log in" }));
+  fireEvent.change(await screen.findByLabelText("Username"), {
+    target: { value: "alice" },
+  });
+  fireEvent.change(screen.getByLabelText("Password"), {
+    target: { value: "alice-password" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Log in" }));
+
+  expect(
+    await screen.findByRole("heading", {
+      level: 1,
+      name: "Nineteen Eighty-Four",
+    }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("alice")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Log out" })).toBeInTheDocument();
+  expect(logins.map((request) => request.headers.get("X-CSRFToken"))).toEqual([
+    "the-token",
+  ]);
+  expect(await logins[0].json()).toEqual({
+    username: "alice",
+    password: "alice-password",
+  });
+});
+
+test("the login page sends a reader who is already logged in to the catalog", async () => {
+  serveBooks([nineteenEightyFour]);
+
+  renderApp("/login", { user: alice });
+
+  expect(
+    await screen.findByRole("heading", { name: "Books" }),
+  ).toBeInTheDocument();
+  expect(screen.queryByLabelText("Username")).toBeNull();
+});
+
+test("a 401 shows the reader as logged out without leaving the page", async () => {
+  server.use(
+    http.get("/api/books/", () =>
+      HttpResponse.json(
+        { detail: "Authentication credentials were not provided." },
+        { status: 401 },
+      ),
+    ),
+  );
+
+  renderApp("/?page=2", { user: alice });
+
+  expect(
+    await screen.findByRole("link", { name: "Log in" }),
+  ).toBeInTheDocument();
+  expect(screen.queryByText("alice")).toBeNull();
+  expect(screen.getByRole("heading", { name: "Books" })).toBeInTheDocument();
+});
+
+test("logging out sends the CSRF token and shows Log in", async () => {
+  setCsrfCookie("the-token");
+  serveBooks([nineteenEightyFour]);
+  const logouts = recordPosts(
+    "/api/auth/logout/",
+    () => new HttpResponse(null, { status: 204 }),
+  );
+  renderApp("/", { user: alice });
+
+  fireEvent.click(await screen.findByRole("button", { name: "Log out" }));
+
+  expect(
+    await screen.findByRole("link", { name: "Log in" }),
+  ).toBeInTheDocument();
+  expect(screen.queryByText("alice")).toBeNull();
+  expect(logouts.map((request) => request.headers.get("X-CSRFToken"))).toEqual([
+    "the-token",
+  ]);
+});
+
+test("a failed logout keeps the reader logged in and says so", async () => {
+  serveBooks([nineteenEightyFour]);
+  recordPosts("/api/auth/logout/", () =>
+    HttpResponse.json({ detail: "Server error." }, { status: 500 }),
+  );
+  renderApp("/", { user: alice });
+
+  fireEvent.click(await screen.findByRole("button", { name: "Log out" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Couldn't log out. Please try again.",
+  );
+  expect(screen.getByText("alice")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Log out" })).toBeEnabled();
+  expect(screen.queryByRole("link", { name: "Log in" })).toBeNull();
 });

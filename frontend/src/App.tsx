@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Route, Routes } from "react-router-dom";
+import LoginPage from "./auth/LoginPage.tsx";
 import { sessionQuery } from "./auth/session.ts";
 import BookDetailPage from "./books/BookDetailPage.tsx";
 import BookListPage from "./books/BookListPage.tsx";
@@ -34,6 +35,7 @@ function App() {
       <Route element={<Layout />}>
         <Route index element={<BookListPage />} />
         <Route path="books/:id" element={<BookDetailPage />} />
+        <Route path="login" element={<LoginPage />} />
         <Route path="*" element={<NotFound title="Page not found" />} />
       </Route>
     </Routes>
