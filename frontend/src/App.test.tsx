@@ -46,16 +46,7 @@ function recordPosts(path: string, response: () => Response) {
   const requests: Request[] = [];
   server.use(
     http.post(path, ({ request }) => {
-      console.log("CI-DEBUG handler hit:", request.method, request.url, {
-        bodyUsed: request.bodyUsed,
-        locked: request.body?.locked,
-      });
-      try {
-        requests.push(request.clone());
-      } catch (error) {
-        console.log("CI-DEBUG clone threw:", error);
-        throw error;
-      }
+      requests.push(request.clone());
       return response();
     }),
   );
@@ -257,50 +248,8 @@ test("logging in from a book returns to it, with the reader in the header", asyn
   );
   renderApp("/books/7");
 
-  const logInLink = await screen.findByRole("link", { name: "Log in" });
-  console.log(
-    "CI-DEBUG book loaded before clicking Log in:",
-    screen.queryByRole("heading", {
-      level: 1,
-      name: "Nineteen Eighty-Four",
-    }) !== null,
-  );
-  fireEvent.click(logInLink);
-  fireEvent.change(await screen.findByLabelText("Username"), {
-    target: { value: "alice" },
-  });
-  fireEvent.change(screen.getByLabelText("Password"), {
-    target: { value: "alice-password" },
-  });
-  fireEvent.click(screen.getByRole("button", { name: "Log in" }));
-
-  expect(
-    await screen.findByRole("heading", {
-      level: 1,
-      name: "Nineteen Eighty-Four",
-    }),
-  ).toBeInTheDocument();
-  expect(screen.getByText("alice")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Log out" })).toBeInTheDocument();
-  expect(logins.map((request) => request.headers.get("X-CSRFToken"))).toEqual([
-    "the-token",
-  ]);
-  expect(await logins[0].json()).toEqual({
-    username: "alice",
-    password: "alice-password",
-  });
-});
-
-test("CI-DEBUG variant: waits for the book before clicking Log in", async () => {
-  const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
-  onTestFinished(() => scrollTo.mockRestore());
-  setCsrfCookie("the-token");
-  serveBook(nineteenEightyFourDetail);
-  const logins = recordPosts("/api/auth/login/", () =>
-    HttpResponse.json<Session>({ user: alice }),
-  );
-  renderApp("/books/7");
-
+  // Leave only once the book has loaded. With MSW 3 under Node, a request
+  // aborted mid-flight can make the next POST bypass MSW and reach the network.
   await screen.findByRole("heading", {
     level: 1,
     name: "Nineteen Eighty-Four",
