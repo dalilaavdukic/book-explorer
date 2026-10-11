@@ -18,9 +18,15 @@ class NotePagination(StrictPageNumberPagination):
     page_size = 20
 
 
+# Tagged "notes" so Swagger UI groups them with the other note operations,
+# not under "books" as their path would.
 @extend_schema_view(
-    get=extend_schema(responses={status.HTTP_200_OK: NoteSerializer, **ERRORS}),
-    post=extend_schema(responses={status.HTTP_201_CREATED: NoteSerializer, **ERRORS}),
+    get=extend_schema(
+        tags=["notes"], responses={status.HTTP_200_OK: NoteSerializer, **ERRORS}
+    ),
+    post=extend_schema(
+        tags=["notes"], responses={status.HTTP_201_CREATED: NoteSerializer, **ERRORS}
+    ),
 )
 class BookNoteListView(generics.ListCreateAPIView):
     serializer_class = NoteSerializer
