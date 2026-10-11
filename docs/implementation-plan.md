@@ -723,7 +723,7 @@ Every journey is walked through end to end in Phase 6.
 | D3 | Enhancements are an optional step in Phase 6, after the core checklist passes and the core is tagged. AC-X2 comes before AC-X1. | A submittable core exists before any optional work. AC-X1 goes last because it changes the private-data boundary. |
 | D4 | In each phase and in the Phase 6 checklist, Claude Code verifies the applicable user-facing acceptance criteria through Playwright MCP whenever technically possible, and records the results. The user also tests by hand, especially usability, visual polish and scenarios flagged as not reliably verifiable by automation. A tooling limitation is flagged, never treated as a blocker. | User-facing behaviour is checked in a real browser without maintaining an end-to-end suite, and people cover what automation can't judge |
 | D5 | Playwright MCP is configured at local scope, outside the repository | The repository and reviewer setup stay unchanged |
-| D6 | Each phase is built on its own branch (`phase-N-<name>`) with a pull request that runs CI. After the phase is approved, `main` is fast-forwarded to the branch, never squashed. | The user reviews each phase's diff on GitHub, `main` only ever holds approved phases, and every commit on it is one CI tested |
+| D6 | Each phase is built on its own branch (`phase-N-<name>`) with a pull request that runs CI. After the phase is approved, the user merges it with GitHub's merge button, never squashing. | The user reviews each phase's diff on GitHub, and `main` only ever holds approved phases. Every commit is kept, each merge commit marks where a phase ends, and CI runs on the pull request and again on `main` |
 
 ## 10. Deferred to phase planning
 

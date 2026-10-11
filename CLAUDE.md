@@ -64,7 +64,7 @@ Never say a test or check passed unless it ran and you saw its output. State wha
 
 - Commit messages: a short subject line, plus a body of a few lines only when the reason isn't obvious.
 - Keep each commit to one logical change.
-- Build each phase on its own branch (`phase-N-<name>`) with a pull request so CI runs. After the phase is approved, fast-forward `main` to it; never squash.
+- Build each phase on its own branch (`phase-N-<name>`) with a pull request so CI runs. After the phase is approved, the user merges it with GitHub's merge button; never squash.
 - Do not include AI attribution in commit messages or pull request descriptions, including co-author trailers or generated-by notices.
 - Comment only where the code can't speak for itself: a constraint, a workaround, a security reason. No comments that restate the code, and no commented-out code.
 - Let Ruff and Prettier handle formatting.
