@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ApiError } from "../api/client.ts";
 import type { Note, NoteRequest } from "../api/notes.ts";
@@ -9,7 +9,12 @@ import LoadingState from "../components/LoadingState.tsx";
 import Pagination from "../components/Pagination.tsx";
 import NoteForm from "./NoteForm.tsx";
 import NoteItem from "./NoteItem.tsx";
-import { draftFromNote, emptyDraft, type NoteDraft } from "./noteDraft.ts";
+import {
+  draftFromNote,
+  emptyDraft,
+  isUnsaved,
+  type NoteDraft,
+} from "./noteDraft.ts";
 import styles from "./NotesSection.module.scss";
 import {
   NOTES_PAGE_SIZE,
@@ -26,9 +31,12 @@ function hasStatus(error: Error | null, status: number) {
   return error instanceof ApiError && error.status === status;
 }
 
-/** The note being edited, copied when the edit opened, and its draft. */
+/**
+ * The note being edited, copied when the edit opened, and its draft. Once the
+ * session has ended, only the draft is kept.
+ */
 interface Edit {
-  note: Note;
+  note: Note | null;
   draft: NoteDraft;
 }
 
@@ -52,22 +60,40 @@ function BookNotes({ bookId }: { bookId: number }) {
   const create = useCreateNote(bookId);
   const update = useUpdateNote(bookId);
   const remove = useDeleteNote(bookId);
+  const readerId = user?.id ?? null;
+  const [shownReaderId, setShownReaderId] = useState(readerId);
+  const { reset: resetCreate } = create;
+  const { reset: resetUpdate } = update;
+  const { reset: resetRemove } = remove;
+
+  // A reader who appears remounts the section instead (arch §8.5), so this is
+  // a session that ended on its own: only unsaved drafts stay, without the
+  // note an edit started from (AC-N12, AC-A8).
+  if (readerId !== shownReaderId) {
+    setShownReaderId(readerId);
+    setNotice(null);
+    if (!isUnsaved(draft)) {
+      setDraft(emptyDraft);
+    }
+    setEdit(
+      edit?.note && isUnsaved(edit.draft, edit.note)
+        ? { note: null, draft: edit.draft }
+        : null,
+    );
+  }
+
+  // A finished change still holds the note's text and the saved note.
+  useEffect(() => {
+    if (readerId === null) {
+      resetCreate();
+      resetUpdate();
+      resetRemove();
+    }
+  }, [readerId, resetCreate, resetUpdate, resetRemove]);
 
   // "Invalid page.": notes deleted elsewhere emptied this page (arch §8.7).
   if (page !== 1 && hasStatus(notes.error, 404)) {
     setPage(1);
-  }
-
-  if (user === null) {
-    return (
-      <section className={styles.notes} aria-label="Your notes">
-        <p>
-          <Link to="/login" state={{ from: location }}>
-            Log in to add notes
-          </Link>
-        </p>
-      </section>
-    );
   }
 
   function handleCreate(request: NoteRequest) {
@@ -90,7 +116,7 @@ function BookNotes({ bookId }: { bookId: number }) {
   }
 
   function handleUpdate(request: NoteRequest) {
-    if (edit === null) {
+    if (edit?.note == null) {
       return;
     }
     setNotice(null);
@@ -138,13 +164,28 @@ function BookNotes({ bookId }: { bookId: number }) {
       onSave={handleUpdate}
       saving={update.isPending}
       error={update.error}
-      savedNote={edit.note}
+      savedNote={edit.note ?? undefined}
       onCancel={() => {
         update.reset();
         setEdit(null);
       }}
+      expired={user === null}
     />
   );
+  const createForm = (
+    <NoteForm
+      label="Add a note"
+      submitLabel="Add note"
+      draft={draft}
+      onDraftChange={setDraft}
+      onSave={handleCreate}
+      saving={create.isPending}
+      error={create.error}
+      onCancel={user === null ? () => setDraft(emptyDraft) : undefined}
+      expired={user === null}
+    />
+  );
+
   const failedDeleteId =
     remove.isError &&
     !hasStatus(remove.error, 401) &&
@@ -172,7 +213,7 @@ function BookNotes({ bookId }: { bookId: number }) {
       <>
         <ol className={styles.list}>
           {results.map((note) =>
-            note.id === edit?.note.id ? (
+            note.id === edit?.note?.id ? (
               <li key={note.id} className={styles.editing}>
                 {editForm}
               </li>
@@ -200,22 +241,23 @@ function BookNotes({ bookId }: { bookId: number }) {
     );
   }
   const editIsListed =
-    notes.data?.results.some((note) => note.id === edit?.note.id) ?? false;
+    notes.data?.results.some((note) => note.id === edit?.note?.id) ?? false;
 
+  // Without a reader, only unsaved drafts show, or else the login link. One
+  // layout for both keeps the create form mounted when the session ends.
+  const showCreateForm = user !== null || isUnsaved(draft);
   return (
-    <section className={styles.notes} aria-labelledby={headingId}>
-      <h2 id={headingId} className={styles.heading}>
-        Your notes
-      </h2>
-      <NoteForm
-        label="Add a note"
-        submitLabel="Add note"
-        draft={draft}
-        onDraftChange={setDraft}
-        onSave={handleCreate}
-        saving={create.isPending}
-        error={create.error}
-      />
+    <section
+      className={styles.notes}
+      aria-labelledby={user ? headingId : undefined}
+      aria-label={user ? undefined : "Your notes"}
+    >
+      {user && (
+        <h2 id={headingId} className={styles.heading}>
+          Your notes
+        </h2>
+      )}
+      {showCreateForm && createForm}
       {notice && (
         <p role="alert" className={styles.notice}>
           {notice}
@@ -224,7 +266,16 @@ function BookNotes({ bookId }: { bookId: number }) {
       {!editIsListed && editForm && (
         <div className={styles.editing}>{editForm}</div>
       )}
-      {list}
+      {user
+        ? list
+        : !showCreateForm &&
+          !editForm && (
+            <p>
+              <Link to="/login" state={{ from: location }}>
+                Log in to add notes
+              </Link>
+            </p>
+          )}
     </section>
   );
 }

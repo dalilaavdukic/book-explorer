@@ -1,4 +1,5 @@
 import { type FormEvent, useId, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { ApiError } from "../api/client.ts";
 import type { Note, NoteRequest } from "../api/notes.ts";
 import styles from "./NoteForm.module.scss";
@@ -20,6 +21,8 @@ interface NoteFormProps {
   /** The note being edited: Save stays disabled until something changes. */
   savedNote?: Note;
   onCancel?: () => void;
+  /** The session ended before the draft was saved: it can't be saved now. */
+  expired?: boolean;
 }
 
 export default function NoteForm({
@@ -32,15 +35,20 @@ export default function NoteForm({
   error,
   savedNote,
   onCancel,
+  expired = false,
 }: NoteFormProps) {
   const id = useId();
+  const location = useLocation();
   const [pageInvalid, setPageInvalid] = useState(false);
   const errors = saveErrors(error);
   const pageError = pageInvalid
     ? "Enter a whole number from 1 to 10,000."
     : errors.page;
   const canSave =
-    !saving && draft.body.trim() !== "" && isUnsaved(draft, savedNote);
+    !expired &&
+    !saving &&
+    draft.body.trim() !== "" &&
+    isUnsaved(draft, savedNote);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -111,6 +119,17 @@ export default function NoteForm({
       {errors.form && (
         <p role="alert" className={styles.error}>
           {errors.form}
+        </p>
+      )}
+      {expired && (
+        // Logging in again discards the draft (spec §6), hence the advice to
+        // copy it first.
+        <p role="alert" className={styles.error}>
+          Your session has expired, and this note isn't saved. Copy anything you
+          want to keep, then log in again.{" "}
+          <Link to="/login" state={{ from: location }}>
+            Log in again
+          </Link>
         </p>
       )}
       <div className={styles.actions}>
