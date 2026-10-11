@@ -5,6 +5,7 @@ from django.test import TestCase
 from accounts.models import User
 from catalog.models import Book
 from notes.models import Note
+from notes.tests import create_books
 
 
 class NoteTestCase(TestCase):
@@ -12,7 +13,7 @@ class NoteTestCase(TestCase):
     def setUpTestData(cls):
         cls.alice = User.objects.create_user(username="alice", password="alice-pass")
         cls.bob = User.objects.create_user(username="bob", password="bob-pass")
-        cls.book = Book.objects.get(title="Nineteen Eighty-Four")
+        (cls.book,) = create_books("Test Book")
 
     def create_note(self, user=None, **fields):
         fields = {"body": "A note.", "page": 12, **fields}

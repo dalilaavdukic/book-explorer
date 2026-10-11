@@ -4,6 +4,7 @@ from django.urls import reverse
 from accounts.models import User
 from catalog.models import Book
 from notes.models import Note
+from notes.tests import create_books
 
 
 class NoteAdminTests(TestCase):
@@ -14,8 +15,7 @@ class NoteAdminTests(TestCase):
         )
         cls.alice = User.objects.create_user(username="alice", password="alice-pass")
         cls.bob = User.objects.create_user(username="bob", password="bob-pass")
-        cls.book = Book.objects.get(title="Nineteen Eighty-Four")
-        cls.other_book = Book.objects.get(title="Animal Farm")
+        cls.book, cls.other_book = create_books("Test Book", "Other Book")
         cls.note = Note.objects.create(
             user=cls.alice, book=cls.book, body="Big Brother is watching.", page=3
         )

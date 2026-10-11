@@ -3,15 +3,15 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.models import User
-from catalog.models import Book
 from notes.models import Note
+from notes.tests import create_books
 
 
 class NoteApiTestCase(APITestCase):
     @classmethod
     def setUpTestData(cls):
         cls.alice = User.objects.create_user(username="alice", password="alice-pass")
-        cls.book = Book.objects.get(title="Nineteen Eighty-Four")
+        (cls.book,) = create_books("Test Book")
         cls.list_url = f"/api/books/{cls.book.pk}/notes/"
 
     def setUp(self):

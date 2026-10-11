@@ -3,8 +3,8 @@ from rest_framework.test import APITestCase
 
 from accounts.models import User
 from accounts.tests.test_auth import AuthTestCase
-from catalog.models import Book
 from notes.models import Note
+from notes.tests import create_books
 
 UNKNOWN_BOOK_ID = 999999
 
@@ -32,8 +32,7 @@ class NotesAuthorizationTestCase(APITestCase):
     def setUpTestData(cls):
         cls.alice = User.objects.create_user(username="alice", password="alice-pass")
         cls.bob = User.objects.create_user(username="bob", password="bob-pass")
-        cls.book = Book.objects.get(title="Nineteen Eighty-Four")
-        cls.other_book = Book.objects.get(title="Animal Farm")
+        cls.book, cls.other_book = create_books("Test Book", "Other Book")
         cls.alices_note = Note.objects.create(
             user=cls.alice, book=cls.book, body="Alice's note.", page=1
         )
@@ -191,7 +190,7 @@ class NoteSessionSecurityTests(AuthTestCase):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-        cls.book = Book.objects.get(title="Nineteen Eighty-Four")
+        (cls.book,) = create_books("Test Book")
 
     def test_writes_without_the_csrf_token_are_refused(self):
         self.log_in()
