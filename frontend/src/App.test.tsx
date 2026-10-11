@@ -1,7 +1,7 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { expect, onTestFinished, test, vi } from "vitest";
-import type { Book, PaginatedBookList } from "./api/books.ts";
+import type { Book, BookDetail, PaginatedBookList } from "./api/books.ts";
 import { renderApp } from "./test/renderApp.tsx";
 import { server } from "./test/server.ts";
 
@@ -12,6 +12,15 @@ const nineteenEightyFour: Book = {
   genre: { id: 2, name: "Dystopian" },
   publication_year: 1949,
 };
+
+const nineteenEightyFourDetail: BookDetail = {
+  ...nineteenEightyFour,
+  description: "A party worker risks everything on a quiet rebellion.",
+};
+
+function serveBook(book: BookDetail) {
+  server.use(http.get(`/api/books/${book.id}/`, () => HttpResponse.json(book)));
+}
 
 function serveBooks(results: Book[], count = results.length) {
   const requests: URLSearchParams[] = [];
@@ -106,4 +115,65 @@ test("an empty page parameter means page 1", async () => {
     await screen.findByRole("link", { name: "Nineteen Eighty-Four" }),
   ).toBeInTheDocument();
   expect(requests.map((params) => params.get("page"))).toEqual(["1"]);
+});
+
+test("a malformed book id shows Book not found without calling the API", () => {
+  const fetchSpy = spyOnFetch();
+
+  renderApp("/books/abc");
+
+  expect(
+    screen.getByRole("heading", { name: "Book not found" }),
+  ).toBeInTheDocument();
+  expect(fetchSpy).not.toHaveBeenCalled();
+});
+
+test("a book opened directly shows every attribute and links to the first page", async () => {
+  serveBook(nineteenEightyFourDetail);
+
+  renderApp("/books/7");
+
+  const article = await screen.findByRole("article");
+  expect(
+    within(article).getByRole("heading", {
+      level: 1,
+      name: "Nineteen Eighty-Four",
+    }),
+  ).toBeInTheDocument();
+  for (const text of [
+    "by George Orwell",
+    "1949",
+    "Dystopian",
+    nineteenEightyFourDetail.description,
+  ]) {
+    expect(within(article).getByText(text)).toBeInTheDocument();
+  }
+  expect(screen.getByRole("link", { name: "Back to books" })).toHaveAttribute(
+    "href",
+    "/",
+  );
+});
+
+test("Back to books returns to the list page the book was opened from", async () => {
+  const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+  onTestFinished(() => scrollTo.mockRestore());
+  serveBooks([nineteenEightyFour], 30);
+  serveBook(nineteenEightyFourDetail);
+  renderApp("/?page=3");
+
+  fireEvent.click(
+    await screen.findByRole("link", { name: "Nineteen Eighty-Four" }),
+  );
+
+  expect(
+    await screen.findByRole("heading", {
+      level: 1,
+      name: "Nineteen Eighty-Four",
+    }),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Back to books" })).toHaveAttribute(
+    "href",
+    "/?page=3",
+  );
+  expect(scrollTo).toHaveBeenCalledWith(0, 0);
 });

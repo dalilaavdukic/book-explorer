@@ -1,4 +1,5 @@
 import { useLocation, useSearchParams } from "react-router-dom";
+import { parsePositiveInteger } from "./parsePositiveInteger.ts";
 
 export const BOOKS_PAGE_SIZE = 12;
 
@@ -12,10 +13,7 @@ function parsePage(value: string | null): number | "invalid" {
   if (value === null || value === "") {
     return 1;
   }
-  const page = Number(value);
-  return /^[1-9][0-9]*$/.test(value) && Number.isSafeInteger(page)
-    ? page
-    : "invalid";
+  return parsePositiveInteger(value) ?? "invalid";
 }
 
 function withPage(params: URLSearchParams, page: number) {
