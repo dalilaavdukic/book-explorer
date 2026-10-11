@@ -39,8 +39,8 @@ class Note(models.Model):
         return f"Note {self.pk} by {self.user} on {self.book}"
 
     def save(self, *args, **kwargs):
-        # Compared with the stored row rather than a snapshot taken on load, so
-        # edits made through the API and in admin count alike.
+        # Compared with the stored row, not a snapshot taken on load, which would
+        # go stale after refresh_from_db().
         if not self._state.adding:
             stored = Note.objects.filter(pk=self.pk).values("body", "page").first()
             if stored and (stored["body"], stored["page"]) != (self.body, self.page):
