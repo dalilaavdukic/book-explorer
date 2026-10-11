@@ -18,3 +18,5 @@ coverage/
 
 # Employer's brief, kept out of the repository
 /Development_Take-Home_Assignment.md
+
+.vscode/
