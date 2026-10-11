@@ -339,7 +339,7 @@ Pagination is chosen per endpoint, not set globally:
 | `page` | 1 up to the last page | Out of range gives 404 (§7.4) |
 | `page_size` | 1–100 | Default 12 |
 
-- **The browser URL and the API use the same parameter names.** The frontend passes the list URL's parameters straight through, repeated `genre` parameters included, and adds `page_size`. Query strings are always built with `URLSearchParams`, which encodes spaces, `&`, `%` and non-ASCII letters correctly.
+- **The browser URL and the API use the same parameter names, with no translation layer.** The frontend's list-state module parses typed values such as `page` once; a value it can't parse shows the same view the API's error would, without a request. Repeated `genre` parameters stay repeated, and the frontend adds `page_size`. Query strings are always built with `URLSearchParams`, which encodes spaces, `&`, `%` and non-ASCII letters correctly.
 - **Filter options only list authors and genres that have at least one book.** Genres are a short, curated list, returned in full. Authors grow with the catalog, so the frontend searches them on the server rather than downloading them all (below).
 - **Implementation.**
   - A django-filter `FilterSet` declares `search`, `author`, `genre`, `has_notes` and `sort`. The spec-specific rules are small methods on it.

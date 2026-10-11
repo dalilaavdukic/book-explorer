@@ -1,0 +1,49 @@
+@use "../styles/variables" as *;
+
+.total {
+  margin: 0 0 $space-4;
+  color: $color-muted;
+}
+
+.list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: $space-4;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  padding: $space-4;
+  border: 1px solid $color-border;
+  border-radius: $radius;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.3;
+}
+
+.meta,
+.genre {
+  margin: 0;
+}
+
+.meta {
+  color: $color-muted;
+}
+
+.genre {
+  align-self: flex-start;
+  margin-top: auto;
+  padding: 0 $space-2;
+  font-size: 0.85rem;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: $radius;
+}
