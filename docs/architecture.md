@@ -1,6 +1,6 @@
 # Book Explorer: Architecture
 
-*Living document, last updated 2026-10-10 (Phase 0). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
+*Living document, last updated 2026-10-10 (Phase 1). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
 
 ## 1. Purpose and status
 
@@ -42,7 +42,7 @@ Two decisions deliberately depart from the assignment's wording or from common d
 | Database | SQLite | No setup for reviewers; fast, isolated tests; supports everything we need (cascading deletes, check and unique constraints, `EXISTS` subqueries, filtered counts). We avoid database-specific features, so moving to PostgreSQL is a settings change. | PostgreSQL: production-like and handles non-ASCII case correctly, but needs Docker or a local install. Offering both was rejected because an untested path is a claim we can't back up. |
 | Python dependencies | pip + venv; `requirements.txt` pinned to exact versions, including sub-dependencies; `requirements-dev.txt` adds dev tools | Reviewers need only Python. The dependency tree is small enough to pin completely without lock tooling. | Poetry: lockfile and dependency groups, but an extra tool for reviewers to install |
 | Query parameters | django-filter | One declarative class lists every accepted parameter; invalid values automatically become a 400 | DRF's `SearchFilter`/`OrderingFilter` (their behaviour conflicts with spec §5.6, see §7.5); hand-written validation |
-| API schema | drf-spectacular (OpenAPI) and Swagger UI | The schema is the source of the frontend's TypeScript types; the docs page lets reviewers explore the API | None |
+| API schema | drf-spectacular (OpenAPI) and Swagger UI, with its assets served locally by drf-spectacular-sidecar | The schema is the source of the frontend's TypeScript types; the docs page lets reviewers explore the API. Local assets keep the docs working offline and keep third-party scripts off a page that shares the reader's session. | Swagger UI assets from a CDN (drf-spectacular's default) |
 | Authentication | Django sessions with DRF `SessionAuthentication` | See §6.1 | DRF tokens, JWT |
 | Frontend language | **TypeScript (strict)**. *Deviation:* the assignment says "JavaScript ES6+" | TypeScript is a typed superset of JavaScript that compiles to ES6+. Combined with types generated from the API schema, mismatches between frontend and backend show up when the code is built, not when it runs. | JavaScript, which follows the assignment wording literally |
 | Build tool | Vite | The standard React tooling now that Create React App is deprecated; it also hosts the dev proxy | — |
@@ -73,7 +73,7 @@ backend/
 - **DRF defaults.**
   - Authentication uses the custom session class (§6.5).
   - The default permission is `IsAuthenticated`, and catalog views explicitly allow public access (§6.6).
-  - Only JSON request bodies are accepted.
+  - Only JSON request bodies are accepted, and responses are JSON only. DRF's browsable API is off; Swagger UI (§7.7) is the interactive docs.
   - The django-filter backend and the drf-spectacular schema class are configured globally.
   - Pagination is not global. Each list view sets its own, because the list endpoints behave differently (§7.4).
 - **Views** use DRF generic views and viewsets.
@@ -152,7 +152,10 @@ Vite (:5173) and Django (:8000) are different origins. Rather than enabling CORS
 
 CORS is the right tool when a frontend and an API really live on different domains; here they don't.
 
-**Setup detail to get right.** Django's CSRF check compares the browser's `Origin` header with the request's `Host`. The proxy must pass the original `Host` through (Vite's default, `changeOrigin: false`), or Django must list `http://localhost:5173` in `CSRF_TRUSTED_ORIGINS`.
+**Proxy setup.**
+
+- The Vite dev server forwards `/api`, `/admin` and `/static` (Django's static files, used by the admin and Swagger UI) to Django at `127.0.0.1:8000`, so the browser really only talks to :5173.
+- It keeps the browser's `Host` header (`changeOrigin: false`, Vite's default). Django's CSRF check compares the browser's `Origin` header with the request's `Host`, so the check passes without listing `http://localhost:5173` in `CSRF_TRUSTED_ORIGINS`. Absolute URLs Django builds, such as pagination links, also point at :5173.
 
 ### 6.3 CSRF and SameSite
 
@@ -389,8 +392,10 @@ Pagination is chosen per endpoint, not set globally:
 
 - **Generation.** drf-spectacular generates an OpenAPI schema from the serializers, views, FilterSet and pagination class.
 - **Endpoints.** The schema is served at `/api/schema/`, and Swagger UI at `/api/docs/`. Reviewers can browse and try every endpoint there, including while logged in, because the docs page shares the session. The page describes endpoints only, never data.
-- **The schema file is committed**, e.g. `backend/openapi.yaml`, so the API contract is readable without running anything.
-  - The frontend generates its TypeScript types from that file with openapi-typescript, and the generated types are committed too.
+- **The schema file is committed** as `backend/openapi.yaml`, so the API contract is readable without running anything.
+  - It's exported with `manage.py spectacular --validate --fail-on-warn`, so a view drf-spectacular can't fully describe fails the export instead of producing a vague schema.
+  - The frontend generates its TypeScript types from that file with openapi-typescript into `frontend/src/api/schema.d.ts`, and the generated types are committed too.
+  - `COMPONENT_SPLIT_REQUEST` is on, so request and response bodies get separate types: read-only fields such as `id` and `created_at` never appear in a request type.
   - CI regenerates both and fails if either differs from what's committed (§9.4).
 - **The schema carries the per-endpoint contracts.**
   - The repeated `genre` parameter is documented as an array of ids (`style: form`, `explode: true`). openapi-typescript turns it into a number array, and `URLSearchParams.append` sends it as repeated parameters.
@@ -597,12 +602,12 @@ There are about 10–20 targeted tests, aimed at behaviour that's easy to break 
 
 ### 9.3 Manual acceptance checklist
 
-There are no automated browser end-to-end tests: they would need both servers and a test database running in CI. Instead, Phase 6 walks through every user journey and acceptance criterion against the running app with a written checklist. That includes the cross-tab cases of AC-A8, which need two real tabs.
+There are no automated browser end-to-end tests: they would need both servers and a test database running in CI. Instead, Phase 6 walks through every user journey and acceptance criterion against the running app with a written checklist. That includes the cross-tab cases of AC-A8, which need two real tabs. Claude Code carries out the walkthrough through Playwright MCP wherever possible, and by hand otherwise (implementation plan §4); no browser test code is committed.
 
 ### 9.4 Code quality and CI
 
 - **Backend:** Ruff for linting and formatting (configured in `ruff.toml`). Static type checking with mypy is deliberately left out. Checking Django and DRF code needs version-matched plugins and frequent `type: ignore`, and in a mostly declarative backend it would catch little. The bugs that matter here are about behaviour, which the tests cover (§9.1); type safety sits at the API boundary instead, through the generated TypeScript types (§7.7).
-- **Frontend:** ESLint (the Vite TypeScript template's rules, including React hooks) and Prettier.
+- **Frontend:** ESLint with the recommended rules of `@eslint/js` and typescript-eslint plus the React hooks and React Refresh plugins (create-vite's ESLint option; its default template now uses oxlint), and Prettier with its default settings.
 - **No pre-commit hooks;** CI is where checks are enforced.
 
 | CI job | Steps |
@@ -628,12 +633,15 @@ There are no automated browser end-to-end tests: they would need both servers an
 | A tab isn't told immediately about a login or logout in another tab | Until it notices (a 401, or the session re-check when it regains focus), it keeps showing its last state, including any open draft, and its requests run with whichever session the browser now holds | The server always answers for the browser's current session, so a stale tab can't reach data that session can't. Once it notices, the clean-up runs (§8.5). Cross-tab messaging (`BroadcastChannel`) would make it immediate, but isn't needed at this scale. |
 | The author combobox is built by hand | Its keyboard and screen-reader behaviour is ours to get right | One small component following the WAI-ARIA combobox pattern, with a keyboard test (§9.2); not worth an autocomplete dependency |
 | Generated types are only as accurate as the schema | A wrong annotation produces wrong types | Custom pieces are annotated deliberately; CI catches a stale schema, but not a wrong annotation |
-| Swagger UI loads its assets from a CDN by default | `/api/docs/` needs internet access | A small extra package can serve them locally; decide when scaffolding |
 | No production hardening | Not deployable as is | Out of scope. Deployment would need HTTPS, `Secure` cookies, `DEBUG` off, a real `SECRET_KEY`, `ALLOWED_HOSTS`, a reverse proxy serving the SPA build, and rate limiting. |
 
-**To settle during scaffolding (Phase 1):**
-- exact version pins
-- where the schema file lives
-- the Swagger UI asset source
-- the Sass package (`sass` or `sass-embedded`)
-- the Vite proxy's `Host` handling (§6.2)
+**Settled during scaffolding (Phase 1):**
+- **Versions.**
+  - Python 3.12 and Node 24 LTS (`frontend/.nvmrc`).
+  - Backend pins are in `backend/requirements*.txt`: Django 5.2.18, DRF 3.18.3, drf-spectacular 0.30.0.
+  - Frontend pins are in `frontend/package-lock.json`: React 19.3, react-router-dom 7.18, Vite 8.3, Vitest 5.0, ESLint 10, Prettier 3.9.
+- **TypeScript 5.9, not 6 or 7.** openapi-typescript 7.13 supports TypeScript 5 only, and typescript-eslint supports versions below 6.1. TypeScript 6 changed defaults that the current Vite template relies on, so `strict` and `DOM.Iterable` are set explicitly.
+- **Schema file:** `backend/openapi.yaml`; the generated types are in `frontend/src/api/schema.d.ts` (§7.7).
+- **Swagger UI assets:** served locally by drf-spectacular-sidecar (§3).
+- **Sass package:** `sass`, the pure JavaScript build, so there's no native binary. Its optional file watcher's native install script is denied in `package.json` (`allowScripts`); Vite doesn't use the watcher.
+- **Vite proxy `Host` handling:** the browser's `Host` is kept (§6.2).

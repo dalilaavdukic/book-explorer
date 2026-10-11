@@ -1,0 +1,7 @@
+openapi: 3.0.3
+info:
+  title: Book Explorer API
+  version: 1.0.0
+  description: Public book catalog and private per-reader notes.
+paths: {}
+components: {}
