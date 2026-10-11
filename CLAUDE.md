@@ -10,6 +10,7 @@ In order of precedence:
 2. `docs/spec.md`: product decisions, user journeys (J1–J10) and acceptance criteria (AC-*).
 3. `docs/architecture.md`: technical decisions and their rationale.
 4. `docs/implementation-plan.md`: phases, dependencies, definition of done (§3), and how each criterion is verified (§4, §7).
+5. `.claude/plans/phase-N.md`: the detailed plan for phase N, once approved. Plans are local and untracked.
 
 Planning notes the user shares are background only; the files above are canonical.
 
@@ -23,7 +24,7 @@ Every phase follows this loop:
 
 1. Read the current code and the documents relevant to the phase.
 2. Write a detailed plan for the next phase only.
-3. Discuss meaningful decisions and get the plan approved before writing code.
+3. Discuss meaningful decisions, have the plan reviewed independently, and get it approved before writing code.
 4. Build the phase as a vertical slice: backend, frontend and tests together.
 5. Run the automated checks (below).
 6. Verify the phase's user-facing acceptance criteria in the browser (below).
@@ -32,6 +33,14 @@ Every phase follows this loop:
 9. Get explicit approval of the phase before starting the next one.
 
 Phases 4 and 5 add a checkpoint inside step 4: build the backend and its tests, review them, fix and commit, then build the frontend. It isn't a separate phase and has no plan or approval of its own.
+
+**Commands.** Four project skills run the loop, and only the user starts them:
+- `/plan-phase N`: steps 1–3. It writes the plan to `.claude/plans/phase-N.md`.
+- `/review-phase-plan N`: an independent review of the plan by the read-only `plan-reviewer` agent, before approval.
+- `/implement-phase N`: steps 4–9. It runs only if the plan's status line reads Approved. Re-running it resumes from the git state, including after compaction or in a new session.
+- `/review-phase-code N [backend]`: step 7, by the read-only `code-reviewer` agent. `backend` reviews the Phase 4/5 checkpoint.
+
+Change a plan's status line to Approved only when the user explicitly approves the plan. Reviewer findings are proposals: show them to the user in full, apply only the ones the user approves, and record each round in the plan's review log.
 
 **Automated checks.** Run everything that applies: backend and frontend tests, Ruff lint and format, ESLint, Prettier, type check and build, `makemigrations --check`, and confirming that regenerating `openapi.yaml` and the TypeScript types leaves no diff against the committed files. CI runs the same checks and must be green.
 
