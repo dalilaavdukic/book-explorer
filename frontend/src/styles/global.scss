@@ -13,3 +13,31 @@ body {
   color: $color-text;
   background: $color-background;
 }
+
+a {
+  color: $color-accent;
+}
+
+button {
+  font: inherit;
+  padding: $space-1 $space-3;
+  color: $color-text;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: $radius;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: $color-muted;
+  }
+
+  &:disabled {
+    color: $color-muted;
+    cursor: not-allowed;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid $color-accent;
+  outline-offset: 2px;
+}
