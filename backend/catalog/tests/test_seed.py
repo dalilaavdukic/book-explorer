@@ -3,7 +3,9 @@ from django.db.migrations.executor import MigrationExecutor
 from django.db.models import Count
 from django.test import TestCase, TransactionTestCase
 
+from accounts.models import User
 from catalog.models import Author, Book, Genre
+from notes.models import Note
 
 
 def migrate(targets=None):
@@ -51,16 +53,21 @@ class SeedRollbackTests(TransactionTestCase):
     def test_rollback_removes_only_seeded_data_and_reapplying_reuses_the_rest(self):
         orwell = Author.objects.get(name="George Orwell")
         dystopian = Genre.objects.get(name="Dystopian")
-        Book.objects.create(
+        book = Book.objects.create(
             title="A Book Added Through Admin",
             author=orwell,
             genre=dystopian,
             publication_year=2000,
             description="Not part of the seed.",
         )
+        reader = User.objects.create_user(username="reader", password="reader-pass")
+        Note.objects.create(user=reader, book=book, body="Dropped with the table.")
         self.addCleanup(migrate)
 
         migrate([("catalog", "0001_initial")])
+
+        # The notes migration depends on the seed, so it's rolled back first.
+        self.assertNotIn("notes_note", connection.introspection.table_names())
 
         self.assertEqual(
             list(Book.objects.values_list("title", flat=True)),
@@ -78,3 +85,5 @@ class SeedRollbackTests(TransactionTestCase):
         self.assertEqual(Book.objects.count(), 101)
         self.assertEqual(Author.objects.get(name="George Orwell").pk, orwell.pk)
         self.assertEqual(Genre.objects.get(name="Dystopian").pk, dystopian.pk)
+        self.assertEqual(Note.objects.count(), 0)
+        self.assertTrue(User.objects.filter(pk=reader.pk).exists())
