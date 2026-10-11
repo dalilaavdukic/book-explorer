@@ -40,7 +40,7 @@ The checkpoint isn't a separate phase. It has no detailed plan or formal approva
 | 0C Implementation roadmap (this document) | Approved 2026-10-10 |
 | 0D Project instructions (`CLAUDE.md`) | Approved 2026-10-10 |
 | 1 Foundation | Complete, approved 2026-10-11 |
-| 2 Book discovery | In progress |
+| 2 Book discovery | Complete, approved 2026-10-11 |
 | 3 Authentication | Not started |
 | 4 User-specific notes | Not started |
 | 5 Search, filtering and sorting | Not started |
