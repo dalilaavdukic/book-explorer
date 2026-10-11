@@ -140,6 +140,8 @@ test("Book not found isn't refetched when the tab regains focus", async () => {
   renderApp("/books/999");
   await screen.findByRole("heading", { name: "Book not found" });
 
+  // The focus listener refetches after awaiting, so act must wait for it.
+  // eslint-disable-next-line @typescript-eslint/require-await
   await act(async () => {
     focusManager.setFocused(false);
     focusManager.setFocused(true);

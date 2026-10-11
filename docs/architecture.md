@@ -616,7 +616,7 @@ There are no automated browser end-to-end tests: they would need both servers an
 ### 9.4 Code quality and CI
 
 - **Backend:** Ruff for linting and formatting (configured in `ruff.toml`). Static type checking with mypy is deliberately left out. Checking Django and DRF code needs version-matched plugins and frequent `type: ignore`, and in a mostly declarative backend it would catch little. The bugs that matter here are about behaviour, which the tests cover (§9.1); type safety sits at the API boundary instead, through the generated TypeScript types (§7.7).
-- **Frontend:** ESLint with the recommended rules of `@eslint/js` and typescript-eslint plus the React hooks and React Refresh plugins (create-vite's ESLint option; its default template now uses oxlint), and Prettier with its default settings.
+- **Frontend:** ESLint with the recommended rules of `@eslint/js`, typescript-eslint's type-checked recommended rules (`recommendedTypeChecked`, which catch unhandled promises and unchecked `any` values), and the React hooks and React Refresh plugins (create-vite's ESLint option; its default template now uses oxlint), and Prettier with its default settings.
 - **No pre-commit hooks;** CI is where checks are enforced.
 
 | CI job | Steps |

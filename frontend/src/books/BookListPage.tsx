@@ -55,7 +55,7 @@ function BookResults({
     content = (
       <ErrorState
         message="The books couldn't be loaded."
-        onRetry={() => refetch()}
+        onRetry={() => void refetch()}
       />
     );
   } else if (data.count === 0) {
