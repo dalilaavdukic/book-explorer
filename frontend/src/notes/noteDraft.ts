@@ -8,6 +8,11 @@ export interface NoteDraft {
 
 export const emptyDraft: NoteDraft = { body: "", page: "" };
 
+export function draftFromNote(note: Note): NoteDraft {
+  const page = note.page ?? null;
+  return { body: note.body, page: page === null ? "" : String(page) };
+}
+
 const MAX_PAGE = 10000;
 
 /**

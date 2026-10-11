@@ -1,5 +1,10 @@
 import { http, HttpResponse, type JsonBodyType } from "msw";
-import type { Note, NoteRequest, PaginatedNoteList } from "../api/notes.ts";
+import type {
+  Note,
+  NoteRequest,
+  PaginatedNoteList,
+  PatchedNoteRequest,
+} from "../api/notes.ts";
 import { server } from "./server.ts";
 
 const firstNoteTime = Date.UTC(2026, 9, 1, 9, 0);
@@ -21,6 +26,13 @@ export function makeNotes(count: number) {
   return Array.from({ length: count }, (_, index) => makeNote(index + 1));
 }
 
+function notFound() {
+  return HttpResponse.json(
+    { detail: "No Note matches the given query." },
+    { status: 404 },
+  );
+}
+
 function newestFirst(a: Note, b: Note) {
   return b.created_at.localeCompare(a.created_at) || b.id - a.id;
 }
@@ -36,6 +48,8 @@ export function serveNotes(bookId: number, notes: Note[] = []) {
     gets: [] as string[],
     /** Each POST's body, in order. */
     posts: [] as unknown[],
+    /** Each PATCH's body, in order. */
+    patches: [] as unknown[],
   };
   let nextId = Math.max(0, ...notes.map((note) => note.id)) + 1;
   const listPath = `/api/books/${bookId}/notes/`;
@@ -67,6 +81,33 @@ export function serveNotes(bookId: number, notes: Note[] = []) {
       });
       api.notes.push(note);
       return HttpResponse.json(note, { status: 201 });
+    }),
+    http.patch<{ id: string }>(
+      "/api/notes/:id/",
+      async ({ params, request }) => {
+        const body = (await request.json()) as PatchedNoteRequest;
+        api.patches.push(body);
+        const note = api.notes.find(({ id }) => id === Number(params.id));
+        if (note === undefined) {
+          return notFound();
+        }
+        const edited = {
+          body: body.body?.trim() ?? note.body,
+          page: body.page === undefined ? note.page : body.page,
+        };
+        if (edited.body !== note.body || edited.page !== note.page) {
+          Object.assign(note, edited, { edited_at: new Date().toISOString() });
+        }
+        return HttpResponse.json(note);
+      },
+    ),
+    http.delete<{ id: string }>("/api/notes/:id/", ({ params }) => {
+      const index = api.notes.findIndex(({ id }) => id === Number(params.id));
+      if (index === -1) {
+        return notFound();
+      }
+      api.notes.splice(index, 1);
+      return new HttpResponse(null, { status: 204 });
     }),
   );
   return api;

@@ -1,4 +1,11 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { focusManager } from "@tanstack/react-query";
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { expect, onTestFinished, test, vi } from "vitest";
 import type { Session, User } from "../api/auth.ts";
@@ -63,9 +70,61 @@ function noteItems() {
   return within(screen.getByRole("list")).getAllByRole("listitem");
 }
 
-async function goToPage(page: number) {
+/** Each listed note's text; an open edit form is listed as null. */
+function listedBodies() {
+  return noteItems().map(
+    (item) => item.querySelector("p:first-child")?.textContent ?? null,
+  );
+}
+
+function noteItem(body: string) {
+  const item = noteItems().find(
+    (candidate) => candidate.querySelector("p")?.textContent === body,
+  );
+  if (item === undefined) {
+    throw new Error(`No listed note reads "${body}".`);
+  }
+  return within(item);
+}
+
+function editForm() {
+  return within(screen.getByRole("form", { name: "Edit note" }));
+}
+
+function changeEdit(body: string, page?: string) {
+  fireEvent.change(editForm().getByLabelText("Note"), {
+    target: { value: body },
+  });
+  if (page !== undefined) {
+    fireEvent.change(editForm().getByLabelText("Page (optional)"), {
+      target: { value: page },
+    });
+  }
+}
+
+function confirmDelete(body: string) {
+  fireEvent.click(noteItem(body).getByRole("button", { name: "Delete" }));
+  fireEvent.click(
+    within(screen.getByRole("dialog", { name: "Delete this note?" })).getByRole(
+      "button",
+      { name: "Delete" },
+    ),
+  );
+}
+
+async function refetchOnFocus() {
+  onTestFinished(() => focusManager.setFocused(undefined));
+  // The focus listener refetches after awaiting, so act must wait for it.
+  // eslint-disable-next-line @typescript-eslint/require-await
+  await act(async () => {
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+  });
+}
+
+async function goToPage(page: number, pageCount = 2) {
   fireEvent.click(screen.getByRole("button", { name: "Next" }));
-  await screen.findByText(`Page ${page} of 2`);
+  await screen.findByText(`Page ${page} of ${pageCount}`);
   await waitFor(() =>
     expect(screen.queryByText("Loading notes…")).not.toBeInTheDocument(),
   );
@@ -280,4 +339,157 @@ test("a reader without notes on the book sees the empty state", async () => {
   expect(
     screen.getByText("You haven't written any notes on this book yet."),
   ).toBeInTheDocument();
+});
+
+test("editing saves the new text and a cleared page, and stays on the page", async () => {
+  const notes = makeNotes(21);
+  notes[0].page = 12;
+  const api = await openAsAlice(notes);
+  await goToPage(2);
+
+  fireEvent.click(noteItem("Note 1.").getByRole("button", { name: "Edit" }));
+  expect(editForm().getByRole("button", { name: "Save" })).toBeDisabled();
+  changeEdit("Revised.", "");
+  fireEvent.click(editForm().getByRole("button", { name: "Save" }));
+
+  await waitFor(() =>
+    expect(screen.queryByRole("form", { name: "Edit note" })).toBeNull(),
+  );
+  expect(api.patches).toEqual([{ body: "Revised.", page: null }]);
+  expect(screen.getByText("Page 2 of 2")).toBeInTheDocument();
+  const item = noteItem("Revised.");
+  expect(item.queryByText("p. 12")).toBeNull();
+  expect(item.getByText(/Edited/)).toBeInTheDocument();
+});
+
+test("Cancel discards an edit's changes", async () => {
+  const api = await openAsAlice([makeNote(1, { body: "Original." })]);
+
+  fireEvent.click(noteItem("Original.").getByRole("button", { name: "Edit" }));
+  changeEdit("Changed.");
+  fireEvent.click(editForm().getByRole("button", { name: "Cancel" }));
+
+  expect(listedBodies()).toEqual(["Original."]);
+  fireEvent.click(noteItem("Original.").getByRole("button", { name: "Edit" }));
+  expect(editForm().getByLabelText("Note")).toHaveValue("Original.");
+  expect(api.patches).toEqual([]);
+});
+
+test("a failed edit says so and keeps the changes", async () => {
+  await openAsAlice([makeNote(1, { body: "Original.", page: 3 })]);
+  failNext("patch", "/api/notes/1/", 500);
+
+  fireEvent.click(noteItem("Original.").getByRole("button", { name: "Edit" }));
+  changeEdit("Changed.", "4");
+  fireEvent.click(editForm().getByRole("button", { name: "Save" }));
+
+  expect(await editForm().findByRole("alert")).toHaveTextContent(
+    "Couldn't save the note. Please try again.",
+  );
+  expect(editForm().getByLabelText("Note")).toHaveValue("Changed.");
+  expect(editForm().getByLabelText("Page (optional)")).toHaveValue("4");
+});
+
+test("Cancel in the delete dialog keeps the note, and Delete removes it", async () => {
+  const api = await openAsAlice(makeNotes(2));
+
+  fireEvent.click(noteItem("Note 2.").getByRole("button", { name: "Delete" }));
+  const dialog = within(
+    screen.getByRole("dialog", { name: "Delete this note?" }),
+  );
+  expect(dialog.getByText("This can't be undone.")).toBeInTheDocument();
+  fireEvent.click(dialog.getByRole("button", { name: "Cancel" }));
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(listedBodies()).toEqual(["Note 2.", "Note 1."]);
+
+  confirmDelete("Note 2.");
+
+  expect(
+    noteItem("Note 2.").getByRole("button", { name: "Deleting…" }),
+  ).toBeDisabled();
+  await waitFor(() => expect(listedBodies()).toEqual(["Note 1."]));
+  expect(api.notes.map(({ id }) => id)).toEqual([1]);
+});
+
+test("deleting the only note on the last page shows the page before it", async () => {
+  const api = await openAsAlice(makeNotes(41));
+  await goToPage(2, 3);
+  await goToPage(3, 3);
+  const getsBefore = api.gets.length;
+
+  confirmDelete("Note 1.");
+
+  await screen.findByText("Page 2 of 2");
+  expect(noteItems()).toHaveLength(20);
+  const getsAfter = api.gets.slice(getsBefore);
+  expect(getsAfter).toContain("page=2&page_size=20");
+  expect(getsAfter).not.toContain("page=3&page_size=20");
+});
+
+test("a failed delete says so and leaves the note visible", async () => {
+  await openAsAlice(makeNotes(1));
+  failNext("delete", "/api/notes/1/", 500);
+
+  confirmDelete("Note 1.");
+
+  expect(await noteItem("Note 1.").findByRole("alert")).toHaveTextContent(
+    "Couldn't delete the note. Please try again.",
+  );
+  expect(listedBodies()).toEqual(["Note 1."]);
+  expect(
+    noteItem("Note 1.").getByRole("button", { name: "Delete" }),
+  ).toBeEnabled();
+});
+
+test.each([
+  {
+    change: "editing",
+    run: () => {
+      fireEvent.click(
+        noteItem("Note 2.").getByRole("button", { name: "Edit" }),
+      );
+      changeEdit("Changed.");
+      fireEvent.click(editForm().getByRole("button", { name: "Save" }));
+    },
+  },
+  { change: "deleting", run: () => confirmDelete("Note 2.") },
+])(
+  "$change a note deleted elsewhere says so and refreshes the list",
+  async ({ run }) => {
+    const api = await openAsAlice(makeNotes(3));
+    api.notes.splice(1, 1);
+
+    run();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "That note no longer exists. It may have been deleted in another tab.",
+    );
+    await waitFor(() => expect(listedBodies()).toEqual(["Note 3.", "Note 1."]));
+    expect(screen.queryByRole("form", { name: "Edit note" })).toBeNull();
+  },
+);
+
+test("an open edit stays on screen when its note leaves the list", async () => {
+  const api = await openAsAlice(makeNotes(3));
+  fireEvent.click(noteItem("Note 2.").getByRole("button", { name: "Edit" }));
+  changeEdit("Changed.");
+  api.notes.splice(1, 1);
+
+  await refetchOnFocus();
+
+  await waitFor(() => expect(listedBodies()).toEqual(["Note 3.", "Note 1."]));
+  expect(editForm().getByLabelText("Note")).toHaveValue("Changed.");
+  for (const body of ["Note 3.", "Note 1."]) {
+    expect(noteItem(body).getByRole("button", { name: "Edit" })).toBeDisabled();
+  }
+
+  fireEvent.click(editForm().getByRole("button", { name: "Save" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "That note no longer exists. It may have been deleted in another tab.",
+  );
+  expect(screen.queryByRole("form", { name: "Edit note" })).toBeNull();
+  for (const body of ["Note 3.", "Note 1."]) {
+    expect(noteItem(body).getByRole("button", { name: "Edit" })).toBeEnabled();
+  }
 });

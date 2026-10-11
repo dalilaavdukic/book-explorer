@@ -1,8 +1,8 @@
 import { type FormEvent, useId, useState } from "react";
 import { ApiError } from "../api/client.ts";
-import type { NoteRequest } from "../api/notes.ts";
+import type { Note, NoteRequest } from "../api/notes.ts";
 import styles from "./NoteForm.module.scss";
-import { type NoteDraft, parsePage } from "./noteDraft.ts";
+import { isUnsaved, type NoteDraft, parsePage } from "./noteDraft.ts";
 
 const MAX_BODY_LENGTH = 5000;
 const SAVE_FAILED = "Couldn't save the note. Please try again.";
@@ -17,6 +17,9 @@ interface NoteFormProps {
   saving: boolean;
   /** Why the last save failed, if it did. */
   error: Error | null;
+  /** The note being edited: Save stays disabled until something changes. */
+  savedNote?: Note;
+  onCancel?: () => void;
 }
 
 export default function NoteForm({
@@ -27,6 +30,8 @@ export default function NoteForm({
   onSave,
   saving,
   error,
+  savedNote,
+  onCancel,
 }: NoteFormProps) {
   const id = useId();
   const [pageInvalid, setPageInvalid] = useState(false);
@@ -34,7 +39,8 @@ export default function NoteForm({
   const pageError = pageInvalid
     ? "Enter a whole number from 1 to 10,000."
     : errors.page;
-  const canSave = !saving && draft.body.trim() !== "";
+  const canSave =
+    !saving && draft.body.trim() !== "" && isUnsaved(draft, savedNote);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -111,6 +117,11 @@ export default function NoteForm({
         <button type="submit" disabled={!canSave}>
           {submitLabel}
         </button>
+        {onCancel && (
+          <button type="button" onClick={onCancel}>
+            Cancel
+          </button>
+        )}
       </div>
     </form>
   );

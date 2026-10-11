@@ -20,3 +20,22 @@
   padding: 0;
   list-style: none;
 }
+
+.notice {
+  margin: $space-6 0 0;
+  padding: $space-3 $space-4;
+  border: 1px solid $color-border;
+  border-radius: $radius;
+  background: $color-surface;
+}
+
+.editing {
+  margin-top: $space-6;
+  padding: $space-3 $space-4;
+  border: 1px solid $color-accent;
+  border-radius: $radius;
+
+  .list & {
+    margin-top: 0;
+  }
+}

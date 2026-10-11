@@ -1,6 +1,14 @@
 import { type QueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import type { User } from "../api/auth.ts";
-import { createNote, fetchNotes, type NoteRequest } from "../api/notes.ts";
+import { ApiError } from "../api/client.ts";
+import {
+  createNote,
+  deleteNote,
+  fetchNotes,
+  type NoteRequest,
+  type PatchedNoteRequest,
+  updateNote,
+} from "../api/notes.ts";
 import {
   privateKey,
   privateQueryOptions,
@@ -49,15 +57,60 @@ async function refreshNotes(
   await client.prefetchQuery(notesQuery(reader, bookId, page));
 }
 
-export function useCreateNote(bookId: number) {
+// A 404 on an edit or delete means the note was deleted elsewhere, so the
+// visible page is out of date. A page that's gone answers "Invalid page.",
+// which the section handles.
+async function refreshIfGone(
+  client: QueryClient,
+  reader: User | null,
+  bookId: number,
+  error: Error,
+) {
+  if (error instanceof ApiError && error.status === 404) {
+    await client.invalidateQueries({
+      queryKey: privateKey(reader, "notes", bookId),
+    });
+  }
+}
+
+function useNoteChange<TVariables extends NoteChange, TData>(
+  bookId: number,
+  mutationFn: (variables: TVariables) => Promise<TData>,
+) {
   return useMutation({
-    mutationFn: ({ request }: NoteChange & { request: NoteRequest }) =>
-      createNote(bookId, request),
+    mutationFn,
     // The finished mutation keeps the note's text; it mustn't outlive the
     // section, as with the login mutation's password.
     gcTime: 0,
     onMutate: (_variables, { client }) => sessionReader(client),
-    onSuccess: (_note, { targetPage }, reader, { client }) =>
+    onSuccess: (_data, { targetPage }, reader, { client }) =>
       refreshNotes(client, reader, bookId, targetPage),
+    onError: (error, _variables, reader, { client }) =>
+      refreshIfGone(client, reader ?? null, bookId, error),
   });
+}
+
+export function useCreateNote(bookId: number) {
+  return useNoteChange(
+    bookId,
+    ({ request }: NoteChange & { request: NoteRequest }) =>
+      createNote(bookId, request),
+  );
+}
+
+export function useUpdateNote(bookId: number) {
+  return useNoteChange(
+    bookId,
+    ({
+      id,
+      request,
+    }: NoteChange & { id: number; request: PatchedNoteRequest }) =>
+      updateNote(id, request),
+  );
+}
+
+export function useDeleteNote(bookId: number) {
+  return useNoteChange(bookId, ({ id }: NoteChange & { id: number }) =>
+    deleteNote(id),
+  );
 }

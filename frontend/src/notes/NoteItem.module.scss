@@ -21,3 +21,35 @@
   font-size: 0.85rem;
   color: $color-muted;
 }
+
+.actions {
+  display: flex;
+  gap: $space-2;
+  margin-top: $space-3;
+}
+
+.error {
+  margin: $space-2 0 0;
+  color: $color-danger;
+}
+
+.dialog {
+  max-width: 24rem;
+  padding: $space-4 $space-6;
+  color: $color-text;
+  border: 1px solid $color-border;
+  border-radius: $radius;
+
+  &::backdrop {
+    background: rgb(0 0 0 / 0.4);
+  }
+
+  p {
+    margin: $space-2 0 0;
+  }
+}
+
+.dialogTitle {
+  margin: 0;
+  font-size: 1.1rem;
+}
