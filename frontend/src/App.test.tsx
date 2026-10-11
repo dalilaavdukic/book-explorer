@@ -257,7 +257,55 @@ test("logging in from a book returns to it, with the reader in the header", asyn
   );
   renderApp("/books/7");
 
-  fireEvent.click(await screen.findByRole("link", { name: "Log in" }));
+  const logInLink = await screen.findByRole("link", { name: "Log in" });
+  console.log(
+    "CI-DEBUG book loaded before clicking Log in:",
+    screen.queryByRole("heading", {
+      level: 1,
+      name: "Nineteen Eighty-Four",
+    }) !== null,
+  );
+  fireEvent.click(logInLink);
+  fireEvent.change(await screen.findByLabelText("Username"), {
+    target: { value: "alice" },
+  });
+  fireEvent.change(screen.getByLabelText("Password"), {
+    target: { value: "alice-password" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Log in" }));
+
+  expect(
+    await screen.findByRole("heading", {
+      level: 1,
+      name: "Nineteen Eighty-Four",
+    }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("alice")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Log out" })).toBeInTheDocument();
+  expect(logins.map((request) => request.headers.get("X-CSRFToken"))).toEqual([
+    "the-token",
+  ]);
+  expect(await logins[0].json()).toEqual({
+    username: "alice",
+    password: "alice-password",
+  });
+});
+
+test("CI-DEBUG variant: waits for the book before clicking Log in", async () => {
+  const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+  onTestFinished(() => scrollTo.mockRestore());
+  setCsrfCookie("the-token");
+  serveBook(nineteenEightyFourDetail);
+  const logins = recordPosts("/api/auth/login/", () =>
+    HttpResponse.json<Session>({ user: alice }),
+  );
+  renderApp("/books/7");
+
+  await screen.findByRole("heading", {
+    level: 1,
+    name: "Nineteen Eighty-Four",
+  });
+  fireEvent.click(screen.getByRole("link", { name: "Log in" }));
   fireEvent.change(await screen.findByLabelText("Username"), {
     target: { value: "alice" },
   });

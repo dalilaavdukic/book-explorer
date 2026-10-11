@@ -40,8 +40,14 @@ function LoginForm() {
         err instanceof ApiError
           ? JSON.stringify(err.body)
           : String((err as Error & { cause?: unknown }).cause),
-        err.stack,
       );
+      let cause: unknown = err;
+      for (let depth = 0; cause instanceof Error && depth < 5; depth++) {
+        console.error(`CI-DEBUG cause ${depth}:`, cause.name, cause.message, {
+          code: (cause as Error & { code?: unknown }).code,
+        });
+        cause = (cause as Error & { cause?: unknown }).cause;
+      }
     },
   });
 

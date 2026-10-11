@@ -52,7 +52,7 @@ jobs:
       - run: npm run build
       - name: CI-DEBUG repeat the suite
         run: |
-          for i in $(seq 1 8); do
+          for i in $(seq 1 12); do
             echo "=== CI-DEBUG run $i ==="
             npx vitest run --silent=false || true
           done
