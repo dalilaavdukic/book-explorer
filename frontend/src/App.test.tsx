@@ -1,4 +1,5 @@
-import { fireEvent, screen, within } from "@testing-library/react";
+import { focusManager } from "@tanstack/react-query";
+import { act, fireEvent, screen, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { expect, onTestFinished, test, vi } from "vitest";
 import type { Book, BookDetail, PaginatedBookList } from "./api/books.ts";
@@ -126,6 +127,28 @@ test("a malformed book id shows Book not found without calling the API", () => {
     screen.getByRole("heading", { name: "Book not found" }),
   ).toBeInTheDocument();
   expect(fetchSpy).not.toHaveBeenCalled();
+});
+
+test("Book not found isn't refetched when the tab regains focus", async () => {
+  const fetchSpy = spyOnFetch();
+  onTestFinished(() => focusManager.setFocused(undefined));
+  server.use(
+    http.get("/api/books/999/", () =>
+      HttpResponse.json({ detail: "Not found." }, { status: 404 }),
+    ),
+  );
+  renderApp("/books/999");
+  await screen.findByRole("heading", { name: "Book not found" });
+
+  await act(async () => {
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+  });
+
+  expect(
+    screen.getByRole("heading", { name: "Book not found" }),
+  ).toBeInTheDocument();
+  expect(fetchSpy).toHaveBeenCalledOnce();
 });
 
 test("a book opened directly shows every attribute and links to the first page", async () => {
