@@ -16,7 +16,9 @@ class StrictPageNumberPagination(PageNumberPagination):
         value = request.query_params.get(self.page_size_query_param, "")
         if value == "":
             return self.page_size
-        if not re.fullmatch(r"[0-9]+", value) or not (
+        # Capping the length before int() avoids Python's 4,300-digit limit,
+        # whose ValueError would be a 500. Three digits cover max_page_size.
+        if not re.fullmatch(r"[0-9]{1,3}", value) or not (
             1 <= int(value) <= self.max_page_size
         ):
             raise ValidationError(

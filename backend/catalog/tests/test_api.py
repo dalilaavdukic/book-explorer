@@ -132,7 +132,7 @@ class BookPaginationTests(OwnBooksTestCase):
         self.assertEqual(len(response.data["results"]), 12)
 
     def test_invalid_page_size_is_rejected(self):
-        for value in ["abc", "0", "-1", "1.5", "101", "1_0"]:
+        for value in ["abc", "0", "-1", "1.5", "101", "1_0", "1" * 4301]:
             with self.subTest(page_size=value):
                 response = self.client.get(LIST_URL, {"page_size": value})
 
