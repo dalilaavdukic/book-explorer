@@ -1,6 +1,6 @@
 # Book Explorer: Architecture
 
-*Living document, last updated 2026-10-11 (Phase 2). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
+*Living document, last updated 2026-10-11 (Phase 3). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
 
 ## 1. Purpose and status
 
@@ -221,8 +221,10 @@ This gives the frontend one rule: **any 401 means the reader is logged out** (§
 | Endpoint | Behaviour |
 |---|---|
 | `GET /api/auth/session/` | Always 200: `{"user": {"id", "username"}}`, or `{"user": null}` for visitors (being a visitor isn't an error). Ensures the CSRF cookie is set. |
-| `POST /api/auth/login/` | CSRF-protected. 200 with `{"user": ...}`, or 400 with one generic error for any wrong credentials (AC-A2). Django's `login()` issues a new session id and CSRF token. Deactivated users can't log in. |
+| `POST /api/auth/login/` | CSRF-protected. 200 with `{"user": ...}`, or 400 with one generic error for any wrong credentials (AC-A2): `{"non_field_errors": ["Invalid username or password."]}`, DRF's standard shape (§7.3). Django's `login()` issues a new session id and CSRF token. Deactivated users can't log in. |
 | `POST /api/auth/logout/` | CSRF-protected. Deletes the session on the server. Always 204, even when already logged out. |
+
+**CSRF on login and logout** is enforced with DRF's own check (`SessionAuthentication.enforce_csrf`), called first in both views, so a failure is DRF's JSON 403, `{"detail": "CSRF Failed: …"}`. Checking it before the credentials means a cross-site login is refused before it's attempted. Django's `csrf_protect` decorator was rejected because its failure is an HTML page, and the API answers only in JSON (§4).
 
 ### 6.8 Threats and mitigations
 
@@ -464,16 +466,17 @@ Each spec need below is met by TanStack Query rather than custom code:
 **Retries and refetching.**
 
 - **A 4xx response is never retried.** It won't change on a second try, and TanStack's default of three retries with backoff would hold "Book not found" and "This page doesn't exist" behind about 7 seconds of loading. A network error or a 5xx is retried once; the Retry button covers the rest.
-- **A query that failed with a 4xx isn't refetched when the tab regains focus.** A query without data shows its loading state again while it refetches, so a "not found" view would turn back into "Loading…" every time the reader returns to the tab. Every other query keeps TanStack's refetch on focus, which the session re-check relies on (§8.5).
+- **A query that failed with a 4xx isn't refetched when the tab regains focus.** A query without data shows its loading state again while it refetches, so a "not found" view would turn back into "Loading…" every time the reader returns to the tab. Every other query keeps TanStack's refetch on focus. The session query sets its own focus policy (§8.5).
 
 Hand-written `useEffect` fetching was rejected because it would mean writing request cancellation, race protection, caching and refetching ourselves, all of which are easy to get wrong. React Router loaders were rejected because they have no cache, would make every search pause a navigation, and fit inline note editing poorly.
 
 ### 8.5 Authentication state, the 401 rule and private data
 
-- **The login state is the cached result of `GET /api/auth/session/`**, stored as a TanStack Query query.
+- **The login state is the cached result of `GET /api/auth/session/`**, stored as a TanStack Query query under `['session']`. That key is outside the `private` root, so the clean-up below never removes it.
   - Logging in, logging out and receiving a 401 all update that one value, and a `useAuth()` hook reads it.
-  - Until the first answer arrives, the app shows a brief loading state, so a logged-in reader never sees a flash of the logged-out header.
-  - The session is re-checked whenever the tab regains focus (TanStack Query's refetch on focus, kept on for this query). That is how a tab notices a logout or a different reader's login in another tab before its next failing request; a different reader's login never produces a 401 at all.
+  - **Startup.** The routes render only after the first answer arrives. Until then the app shows a brief loading state, or an error with Retry if the request fails. No component ever sees an unknown session: a logged-in reader never sees a flash of the logged-out header, and the CSRF cookie is always set before the first write. `useAuth()` throws if it's ever called before then.
+  - The session is re-checked whenever the tab regains focus. That is how a tab notices a logout or a different reader's login in another tab before its next failing request; a different reader's login never produces a 401 at all.
+  - **Query settings.** `staleTime: Infinity`, so a component calling `useAuth()` never triggers a fetch, and `refetchOnWindowFocus: "always"`, which re-checks on every focus even though the data is never stale.
 - **Any 401 marks the reader as logged out.** The header, the notes section and the "Books with my notes" control switch to their logged-out views (AC-A7, spec §6).
   - **Exception:** a note form with unsaved text stays on screen. It shows "Your session has expired" with a way to log in again, and keeps the text (AC-N12). A logout in this tab, or a login, discards the draft instead (below).
   - Nothing redirects automatically.
@@ -487,7 +490,11 @@ A response is *private* if it depends on who is logged in: a reader's notes, `ha
 - **One function updates the session and, whenever the reader changes (including to or from nobody), runs the clean-up.** That covers logging out, logging in, any 401 (expiry, or logout in another tab), and a re-check that finds a different reader or none. The clean-up:
   1. cancels in-flight private queries; TanStack Query discards their results, so a late response can't refill the cache
   2. removes every private entry from the cache
+- **In the code** (`auth/session.ts`), that function is `applySession`, the only code that writes the session. Two callers:
+  - the session query, with each answer at startup and on every re-check. An answer that arrives after its check was cancelled is dropped.
+  - `changeSession`, the entry point for login, logout and any 401. It first cancels any session check still in flight. Otherwise a re-check sent just before a logout could answer with the old reader after the logout and put them back on screen.
 - **Private queries run only while a reader is logged in** (their `enabled` option depends on the session), so nothing fetches private data between a 401 and the next login.
+- **Every private query is built with `privateQueryOptions(user, key, queryFn)`**, which puts the key under the `private` root with the reader's id and sets `enabled`. Neither can be forgotten.
 - **No view shows one reader's data while another's loads.** Where a view keeps previous results on screen while the next page loads, it does so only between keys of the same reader, never across readers or from private to public results.
 - **Public data stays cached.** The catalog survives a logout without reloading. More importantly, the book page stays mounted after a 401, which is what keeps an open note form on screen (AC-N12).
 
@@ -514,9 +521,12 @@ Rejected alternatives:
 ### 8.6 Returning to the right page after login
 
 - **How it works.** "Log in" links pass the current location in React Router's navigation state (`state: { from }`). After a successful login, the app navigates there, or to the catalog if there's no stored location (AC-A1, AC-N10).
+  - The login page fixes its target when it opens, and only a login made on that page uses it. Opened while a reader is already logged in, it goes to the catalog (AC-A6).
+  - The redirect replaces the login page's history entry, so Back doesn't return to it.
+  - The stored location's own state goes with it, so "Back to books" still works on the page the reader returns to.
 - **Why it's safe.** The return target is never read from the URL, and a link from another site can't carry router state. There is therefore no attacker-controlled redirect target, so an open redirect is impossible by design rather than prevented by validation.
 - **Rejected alternative.** A `?next=` URL parameter would need careful validation: `//evil.com` looks like a path but leads to another site.
-- **Trade-off.** Refreshing the login page itself loses the return target, and the reader lands on the catalog, which AC-A1 allows.
+- **Trade-off.** Router state lives in `history.state`, so refreshing the login page keeps the return target. A login page opened without it, by typing `/login` or opening the "Log in" link in a new tab, sends the reader to the catalog, which AC-A1 allows.
 
 ### 8.7 List state in the URL
 
@@ -663,3 +673,13 @@ There are no automated browser end-to-end tests: they would need both servers an
   - It turns off `page=last` (§7.4).
 - **Seed data:** inline in the migration, checked against English Wikipedia (§5).
 - **Query retries and refetch on focus:** §8.4.
+
+**Settled during authentication (Phase 3):**
+- **No new dependencies.**
+- **401 class:** `accounts.authentication.SessionAuthentication` names the `Session` scheme in `WWW-Authenticate` (§6.5). A small drf-spectacular extension describes it, because drf-spectacular's own scheme matches only DRF's exact class. The schema keeps the name `cookieAuth` (§7.7).
+- **Auth endpoints:** three `APIView`s in `accounts`, under `/api/auth/` (§6.7). CSRF is checked with DRF's own check, before the credentials.
+- **Passwords aren't trimmed.** The login serializer turns off DRF's default whitespace trimming, which would change a password that starts or ends with a space.
+- **Demo users:** `manage.py create_demo_users`; the README lists the credentials (spec §5.4). It has no `DEBUG` guard, because the spec asks only for the README warning.
+- **Session state and private data:** `auth/session.ts` holds `applySession`, `changeSession`, `useAuth` and `privateQueryOptions`. The 401 hooks are in `api/queryClient.ts` (§8.5).
+- **Return after login:** the target is fixed when the login page opens (§8.6).
+- **Type-aware lint:** typescript-eslint's type-checked recommended rules (§9.4).
