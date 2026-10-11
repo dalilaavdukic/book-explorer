@@ -248,7 +248,13 @@ test("logging in from a book returns to it, with the reader in the header", asyn
   );
   renderApp("/books/7");
 
-  fireEvent.click(await screen.findByRole("link", { name: "Log in" }));
+  // Leave only once the book has loaded. With MSW 3 under Node, a request
+  // aborted mid-flight can make the next POST bypass MSW and reach the network.
+  await screen.findByRole("heading", {
+    level: 1,
+    name: "Nineteen Eighty-Four",
+  });
+  fireEvent.click(screen.getByRole("link", { name: "Log in" }));
   fireEvent.change(await screen.findByLabelText("Username"), {
     target: { value: "alice" },
   });
