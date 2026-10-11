@@ -39,22 +39,27 @@ function serveBooks(results: Book[], count = results.length) {
   return requests;
 }
 
-function spyOnFetch() {
+// Counts catalog requests only: the app also checks the session at startup and
+// whenever the tab regains focus.
+function spyOnBookRequests() {
   const spy = vi.spyOn(globalThis, "fetch");
   onTestFinished(() => spy.mockRestore());
-  return spy;
+  return () =>
+    spy.mock.calls.filter(
+      ([input]) => typeof input === "string" && input.startsWith("/api/books/"),
+    );
 }
 
-test("an unknown route shows Page not found with a link to the catalog", () => {
+test("an unknown route shows Page not found with a link to the catalog", async () => {
   renderApp("/nope");
 
+  expect(
+    await screen.findByRole("heading", { name: "Page not found" }),
+  ).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Book Explorer" })).toHaveAttribute(
     "href",
     "/",
   );
-  expect(
-    screen.getByRole("heading", { name: "Page not found" }),
-  ).toBeInTheDocument();
   expect(
     screen.getByRole("link", { name: "Back to the catalog" }),
   ).toHaveAttribute("href", "/");
@@ -93,18 +98,18 @@ test("a page past the last one shows This page doesn't exist", async () => {
   ).toHaveAttribute("href", "/");
 });
 
-test("a malformed page shows the same view without calling the API", () => {
-  const fetchSpy = spyOnFetch();
+test("a malformed page shows the same view without calling the API", async () => {
+  const bookRequests = spyOnBookRequests();
 
   renderApp("/?page=abc&utm_source=mail");
 
   expect(
-    screen.getByRole("heading", { name: "This page doesn't exist" }),
+    await screen.findByRole("heading", { name: "This page doesn't exist" }),
   ).toBeInTheDocument();
   expect(
     screen.getByRole("link", { name: "Go to the first page" }),
   ).toHaveAttribute("href", "/?utm_source=mail");
-  expect(fetchSpy).not.toHaveBeenCalled();
+  expect(bookRequests()).toEqual([]);
 });
 
 test("an empty page parameter means page 1", async () => {
@@ -118,19 +123,19 @@ test("an empty page parameter means page 1", async () => {
   expect(requests.map((params) => params.get("page"))).toEqual(["1"]);
 });
 
-test("a malformed book id shows Book not found without calling the API", () => {
-  const fetchSpy = spyOnFetch();
+test("a malformed book id shows Book not found without calling the API", async () => {
+  const bookRequests = spyOnBookRequests();
 
   renderApp("/books/abc");
 
   expect(
-    screen.getByRole("heading", { name: "Book not found" }),
+    await screen.findByRole("heading", { name: "Book not found" }),
   ).toBeInTheDocument();
-  expect(fetchSpy).not.toHaveBeenCalled();
+  expect(bookRequests()).toEqual([]);
 });
 
 test("Book not found isn't refetched when the tab regains focus", async () => {
-  const fetchSpy = spyOnFetch();
+  const bookRequests = spyOnBookRequests();
   onTestFinished(() => focusManager.setFocused(undefined));
   server.use(
     http.get("/api/books/999/", () =>
@@ -150,7 +155,7 @@ test("Book not found isn't refetched when the tab regains focus", async () => {
   expect(
     screen.getByRole("heading", { name: "Book not found" }),
   ).toBeInTheDocument();
-  expect(fetchSpy).toHaveBeenCalledOnce();
+  expect(bookRequests()).toHaveLength(1);
 });
 
 test("a book opened directly shows every attribute and links to the first page", async () => {
@@ -201,4 +206,13 @@ test("Back to books returns to the list page the book was opened from", async ()
     "/?page=3",
   );
   expect(scrollTo).toHaveBeenCalledWith(0, 0);
+});
+
+test("until the session is known, the app shows only its loading state", async () => {
+  renderApp("/", { user: { id: 1, username: "alice" }, holdSession: true });
+
+  expect(await screen.findByRole("status")).toHaveTextContent("Loading…");
+  expect(screen.queryByRole("link", { name: "Log in" })).toBeNull();
+  expect(screen.queryByText("alice")).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Books" })).toBeNull();
 });
