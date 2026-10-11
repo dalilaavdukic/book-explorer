@@ -25,7 +25,7 @@ interface GetOptions {
   signal?: AbortSignal;
 }
 
-export async function apiGet<T>(
+export function apiGet<T>(
   path: string,
   { query = {}, signal }: GetOptions = {},
 ): Promise<T> {
@@ -37,15 +37,48 @@ export async function apiGet<T>(
   }
   const search = params.toString();
 
+  return request<T>(search ? `${path}?${search}` : path, {
+    headers: { Accept: "application/json" },
+    signal,
+  });
+}
+
+interface SendOptions {
+  body?: unknown;
+  signal?: AbortSignal;
+}
+
+/** A write. A 204 resolves to undefined. */
+export function apiSend<T>(
+  method: "POST" | "PATCH" | "DELETE",
+  path: string,
+  { body, signal }: SendOptions = {},
+): Promise<T> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  // Read on every call: Django issues a new token at each login.
+  const csrfToken = readCookie("csrftoken");
+  if (csrfToken) {
+    headers["X-CSRFToken"] = csrfToken;
+  }
+  if (body !== undefined) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  return request<T>(path, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+    signal,
+  });
+}
+
+async function request<T>(url: string, init: RequestInit): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(search ? `${path}?${search}` : path, {
-      headers: { Accept: "application/json" },
-      signal,
-    });
+    response = await fetch(url, init);
   } catch (error) {
     // A cancelled query isn't a failure: TanStack Query expects the abort error.
-    if (signal?.aborted) {
+    if (init.signal?.aborted) {
       throw error;
     }
     throw new NetworkError(error);
@@ -53,6 +86,9 @@ export async function apiGet<T>(
 
   if (!response.ok) {
     throw new ApiError(response.status, await readJson(response));
+  }
+  if (response.status === 204) {
+    return undefined as T;
   }
   return (await response.json()) as T;
 }
@@ -63,4 +99,12 @@ async function readJson(response: Response): Promise<unknown> {
   } catch {
     return null;
   }
+}
+
+function readCookie(name: string) {
+  const prefix = `${name}=`;
+  return document.cookie
+    .split("; ")
+    .find((cookie) => cookie.startsWith(prefix))
+    ?.slice(prefix.length);
 }
