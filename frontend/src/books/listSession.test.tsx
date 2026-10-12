@@ -142,7 +142,7 @@ test("after a 401, the public list replaces the reader's, and the next reader se
     expect(api.requests.at(-1)).toBe("page=1&page_size=12&has_notes=true"),
   );
 
-  expect(screen.getByRole("status")).toHaveTextContent("Loading books…");
+  expect(screen.getByText("Loading books…")).toBeInTheDocument();
   expect(aliceTextOnScreen()).toEqual([]);
   api.release();
   expect(
@@ -161,7 +161,7 @@ test("a re-check that finds another reader shows only their noted books", async 
   await refetchOnFocus();
 
   expect(await screen.findByText("bob")).toBeInTheDocument();
-  expect(screen.getByRole("status")).toHaveTextContent("Loading books…");
+  expect(screen.getByText("Loading books…")).toBeInTheDocument();
   expect(aliceTextOnScreen()).toEqual([]);
   api.release();
   expect(
@@ -226,7 +226,7 @@ test("logging out on a has_notes list shows the public list at once, and logging
   api.hold();
   navigate("/?has_notes=true");
 
-  expect(screen.getByRole("status")).toHaveTextContent("Loading books…");
+  expect(screen.getByText("Loading books…")).toBeInTheDocument();
   expect(aliceTextOnScreen()).toEqual([]);
   api.release();
   expect(

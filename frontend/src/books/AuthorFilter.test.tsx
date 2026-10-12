@@ -102,6 +102,25 @@ test("no match and a failure each say so", async () => {
   expect(optionNames()).toEqual([]);
 });
 
+test("a message shown again on reopening goes into the same live region", async () => {
+  serveBooks([hobbit]);
+  serveAuthorSuggestions([]);
+  await renderList();
+  const status = screen.getByRole("status");
+  expect(status).toBeEmptyDOMElement();
+
+  typeAuthor("zzz");
+  await waitFor(() => expect(status).toHaveTextContent("No authors match."));
+  expect(authorInput()).toHaveAttribute("aria-expanded", "false");
+  press("Escape");
+  expect(status).toBeEmptyDOMElement();
+  press("ArrowDown");
+
+  expect(screen.getByRole("status")).toBe(status);
+  expect(status).toHaveTextContent("No authors match.");
+  expect(authorInput()).toHaveAttribute("aria-expanded", "false");
+});
+
 test("the arrow keys and Enter choose an author, as a new history entry from page 1", async () => {
   const bookRequests = serveBooks([hobbit], 30);
   serveAuthorSuggestions(tolAuthors);
@@ -143,6 +162,7 @@ test("the arrow keys wrap around, and Escape closes the list, then restores the 
   await waitFor(() => expect(authorInput()).toHaveValue("J. R. R. Tolkien"));
   typeAuthor("tol");
   await screen.findByRole("listbox", { name: "Authors" });
+  expect(authorInput()).toHaveAttribute("aria-expanded", "true");
 
   press("ArrowUp");
   expect(

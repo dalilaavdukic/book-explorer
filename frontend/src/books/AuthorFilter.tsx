@@ -114,7 +114,7 @@ export default function AuthorFilter({ author, onChange }: AuthorFilterProps) {
           id={`${id}-input`}
           type="text"
           role="combobox"
-          aria-expanded={open}
+          aria-expanded={options.length > 0}
           aria-controls={listId}
           aria-autocomplete="list"
           aria-activedescendant={
@@ -171,11 +171,9 @@ export default function AuthorFilter({ author, onChange }: AuthorFilterProps) {
           </li>
         ))}
       </ul>
-      {open && (
-        <p role="status" className={styles.status}>
-          {status}
-        </p>
-      )}
+      <p role="status" className={styles.status}>
+        {status}
+      </p>
     </div>
   );
 }
