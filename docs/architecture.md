@@ -540,6 +540,7 @@ Rejected alternatives:
 - **The selected author is restored from its id.** The selector shows the name from `GET /api/authors/{id}/`, so a bookmarked `?author=12` works without downloading the author list. Suggestions are fetched with the same 300 ms pause and cached by search text. If the id doesn't exist, the book list's own 400 already shows "This link contains invalid filters" (§7.5).
 - **Typing replaces the current history entry.** Back doesn't step through "t", "to", "tol"… The search box's × replaces it too, writing the empty search at once.
 - **Changing a filter, the sort or the page adds a history entry**, so Back undoes one deliberate change at a time.
+- **URL changes render at once.** The router is set to `useTransitions={false}`, so a location change renders as an ordinary update instead of a React transition. As a transition, a control that reads the URL showed its old value for one frame after a click, before the new URL rendered. That affected the "Books with my notes" checkbox and the author field after its ×.
 - **Resets and clean-up:**
   - Changing search, filters or sort removes `page`, returning to page 1 (AC-S6).
   - Empty parameters are removed, and search text is trimmed before it's written to the URL.
@@ -781,6 +782,7 @@ There are no automated browser end-to-end tests: they would need both servers an
   - Trade-off: text in a card can't be selected by dragging, because the press lands on the link.
 - **Icons:** `components/icons.tsx` holds six inline SVG icons. The `<select>` chevron is a CSS data URI of the same chevron, because a select can't hold markup.
 - **The search box has its own ×** instead of the browser's, which Firefox doesn't draw (§8.8).
+- **Router transitions are off** (§8.7). The flash they caused can't be seen in jsdom, because Testing Library's `act()` flushes transitions. It was checked in the browser instead, by reading the controls on every animation frame before and after the change. The test harness's probe still reports in a layout effect, which stays correct without transitions.
 - **The genre panel's `relatedTarget` rule** (§8.8) has a test. jsdom's `blur()` moves focus to the document, so its `focusout` has a `null` `relatedTarget`, as a click on the panel's padding does in a browser.
 - **Sort.** The user judged the restyled six-option `<select>` in the browser and didn't keep it. The sort is now a field `<select>` plus one direction button (§8.8).
   - The URL's six `sort` values, their parsing and the default are unchanged.

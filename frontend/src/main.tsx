@@ -11,7 +11,10 @@ const queryClient = createQueryClient();
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      {/* A URL change renders at once rather than as a transition. Otherwise a
+          control that reads the URL, such as a checkbox, shows its old value
+          for a frame after it's clicked. */}
+      <BrowserRouter useTransitions={false}>
         <App />
       </BrowserRouter>
     </QueryClientProvider>
