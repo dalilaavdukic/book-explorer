@@ -2,13 +2,14 @@ import io
 import logging
 from unittest import mock
 
+from django.contrib.auth.views import LoginView
 from django.db import DatabaseError
 from django.test import RequestFactory, SimpleTestCase, override_settings
 from django.utils.functional import SimpleLazyObject
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.test import APIRequestFactory, APITestCase
+from rest_framework.test import APIClient, APIRequestFactory, APITestCase
 from rest_framework.views import APIView
 
 from accounts.models import User
@@ -194,3 +195,64 @@ class RequestContextFilterTests(SimpleTestCase):
         request.user = SimpleLazyObject(unavailable)
 
         self.assertEqual(self.context(request=request), " [POST, user unknown]")
+
+
+NOT_FOUND = {"detail": "Not found."}
+
+
+class ApiNotFoundTests(APITestCase):
+    def assert_json_not_found(self, response):
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response["Content-Type"], "application/json")
+        self.assertEqual(response.json(), NOT_FOUND)
+
+    def test_paths_no_route_matches_get_a_json_404(self):
+        for path in ("/api/nope/", "/api/books/abc/", "/api/notes/-1/", "/api/books"):
+            with self.subTest(path=path):
+                self.assert_json_not_found(self.client.get(path))
+
+    @override_settings(DEBUG=True)
+    def test_paths_no_route_matches_get_a_json_404_in_debug_mode_too(self):
+        for path in ("/api/nope/", "/api/auth/login"):
+            with self.subTest(path=path):
+                self.assert_json_not_found(self.client.post(path, {}, format="json"))
+
+    def test_writes_to_unmatched_paths_get_a_json_404_without_a_csrf_token(self):
+        client = APIClient(enforce_csrf_checks=True)
+        for path in ("/api/nope/", "/api/notes/abc/"):
+            for method in ("post", "patch", "delete"):
+                with self.subTest(path=path, method=method):
+                    response = getattr(client, method)(path, {}, format="json")
+
+                    self.assert_json_not_found(response)
+
+
+@override_settings(DEBUG=False)
+class ApiErrorHandlerTests(APITestCase):
+    def setUp(self):
+        self.output = capture_console_output(self)
+        self.client.raise_request_exception = False
+
+    def test_server_error_is_json_under_the_api_and_html_elsewhere(self):
+        with failing(GenreListView, "list"):
+            response = self.client.get("/api/genres/")
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.json(), {"detail": "A server error occurred."})
+
+        with failing(LoginView, "dispatch"):
+            response = self.client.get("/admin/login/")
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertIn("text/html", response["Content-Type"])
+
+    def test_host_outside_allowed_hosts_gets_a_json_400_under_the_api(self):
+        response = self.client.get("/api/books/", headers={"host": "evil.example"})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), {"detail": "Bad request."})
+
+        response = self.client.get("/admin/login/", headers={"host": "evil.example"})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("text/html", response["Content-Type"])

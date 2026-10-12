@@ -1,6 +1,6 @@
 # Book Explorer: Architecture
 
-*Living document, last updated 2026-10-12 (Phase 7, logging). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
+*Living document, last updated 2026-10-12 (Phase 7, JSON errors). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
 
 ## 1. Purpose and status
 
@@ -299,11 +299,18 @@ This gives the frontend one rule: **any 401 means the reader is logged out** (§
 | 403 | CSRF check failed |
 | 404 | Doesn't exist or isn't yours; unknown book or author; page out of range |
 | 405 | Method not supported (e.g. PUT on a note) |
-| 500 | Never caused by anything the client sends (AC-S8) |
+| 500 | Never caused by anything the client sends (AC-S8). The one exception is in debug mode: with `DEBUG` on, more than 1,000 query parameters make Django's debug page fail, and the development server answers a plain-text 500. |
 
 Errors use DRF's standard shapes:
 - **General errors:** `{"detail": "Not found."}`
 - **Validation errors:** one list of messages per field, e.g. `{"page": ["Ensure this value is less than or equal to 10000."]}`
+
+Every `/api/` error is JSON in these shapes, including those no DRF view answers:
+- **A path no route matches**, including an id that isn't a number, gets `{"detail": "Not found."}` from a catch-all route. API URLs end in a slash, so one without it gets this 404 rather than a redirect, which would turn a POST into a GET.
+- **A request Django refuses before any view** (a `Host` outside `ALLOWED_HOSTS`, a body over 2.5 MB, more than 1,000 fields) gets `{"detail": "Bad request."}`.
+- **An unexpected error** gets `{"detail": "A server error occurred."}`, and is logged with its traceback (§4).
+
+The last two come from `handler400` and `handler500`, which Django uses only with `DEBUG` off; with it on, it shows its debug page. Other paths, such as the admin, keep Django's own pages.
 
 The frontend shows field errors next to the matching form fields (AC-N3). A custom error envelope was rejected: it would be extra code and tests with little benefit for a single client.
 
@@ -803,3 +810,4 @@ There are no automated browser end-to-end tests: they would need both servers an
 
 **Settled during final integration (Phase 7):**
 - **Logging** (§4). The request filter sits on the console handler, not on a logger, because a logger's filters only see records created on that logger, not those that propagate to it from `django.request`. `django.server` is declared again as Django's default declares it, so runserver's request lines keep their own format. The filter never raises: a filter's exception isn't caught by the logging module, and loading the user fails when the database does.
+- **JSON errors** (§7.3). The catch-all is a plain Django view, so it stays out of the schema, and it's exempt from Django's CSRF middleware. DRF exempts its own views and checks CSRF itself, in JSON; without the exemption, a write to an unknown path would get the middleware's HTML 403. It reads and changes nothing.
