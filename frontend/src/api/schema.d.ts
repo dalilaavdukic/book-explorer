@@ -283,6 +283,13 @@ export interface operations {
                 author?: number;
                 /** @description Only books in any of these genres. Repeat for several. */
                 genre?: number[];
+                /**
+                 * @description `true` lists only the books the reader has notes on, and requires login. `false` is the same as leaving it out.
+                 *
+                 *     * `true` - true
+                 *     * `false` - false
+                 */
+                has_notes?: "false" | "true";
                 /** @description A page number within the paginated result set. */
                 page?: number;
                 /** @description Number of results to return per page. */

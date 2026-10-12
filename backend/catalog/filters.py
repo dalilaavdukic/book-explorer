@@ -1,10 +1,13 @@
 import re
 
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from django.db.models.functions import Lower
 from django_filters import fields
 from django_filters import rest_framework as filters
+from rest_framework.exceptions import NotAuthenticated
+
+from notes.models import Note
 
 from .models import Author, Genre
 
@@ -51,6 +54,12 @@ class BookFilter(filters.FilterSet):
         distinct=False,
         help_text="Only books in any of these genres. Repeat for several.",
     )
+    has_notes = filters.ChoiceFilter(
+        choices=[("true", "true"), ("false", "false")],
+        method="filter_has_notes",
+        help_text="`true` lists only the books the reader has notes on, and "
+        "requires login. `false` is the same as leaving it out.",
+    )
     sort = filters.ChoiceFilter(
         choices=[(value, value) for value in BOOK_ORDERINGS],
         method="filter_sort",
@@ -64,6 +73,16 @@ class BookFilter(filters.FilterSet):
                 Q(title__icontains=word) | Q(author__name__icontains=word)
             )
         return queryset
+
+    def filter_has_notes(self, queryset, name, value):
+        if value == "false":
+            return queryset
+        user = self.request.user
+        if not user.is_authenticated:
+            raise NotAuthenticated()
+        return queryset.filter(
+            Exists(Note.objects.filter(user=user, book=OuterRef("pk")))
+        )
 
     def filter_sort(self, queryset, name, value):
         return queryset.order_by(*BOOK_ORDERINGS[value])

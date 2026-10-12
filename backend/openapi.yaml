@@ -69,6 +69,18 @@ paths:
         description: Only books in any of these genres. Repeat for several.
         explode: true
         style: form
+      - in: query
+        name: has_notes
+        schema:
+          type: string
+          enum:
+          - 'false'
+          - 'true'
+        description: |-
+          `true` lists only the books the reader has notes on, and requires login. `false` is the same as leaving it out.
+
+          * `true` - true
+          * `false` - false
       - name: page
         required: false
         in: query
