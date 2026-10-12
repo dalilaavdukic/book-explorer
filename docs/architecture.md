@@ -1,6 +1,6 @@
 # Book Explorer: Architecture
 
-*Living document, last updated 2026-10-12 (Phase 7, JSON errors). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
+*Living document, last updated 2026-10-12 (Phase 7, error boundaries). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
 
 ## 1. Purpose and status
 
@@ -439,9 +439,9 @@ frontend/src/
 ├── notes/        NotesSection, NoteForm, NoteItem, query and mutation hooks
 ├── components/   shared: Layout and Header, Pagination (book list and
 │                 notes), LoadingState, ErrorState, EmptyState, NotFound,
-│                 icons.tsx (inline SVG icons)
+│                 ErrorBoundary and ErrorFallback, icons.tsx (inline SVG icons)
 ├── styles/       _variables.scss, _mixins.scss, global.scss
-└── App.tsx, main.tsx
+└── App.tsx, main.tsx, errorReporting.ts
 ```
 
 **Where code goes:**
@@ -487,6 +487,11 @@ Each spec need below is met by TanStack Query rather than custom code:
 - **A 4xx response is never retried.** It won't change on a second try, and TanStack's default of three retries with backoff would hold "Book not found" and "This page doesn't exist" behind about 7 seconds of loading. A network error or a 5xx is retried once; the Retry button covers the rest.
 - **A query that failed with a 4xx isn't refetched when the tab regains focus.** A query without data shows its loading state again while it refetches, so a "not found" view would turn back into "Loading…" every time the reader returns to the tab. Every other query keeps TanStack's refetch on focus. The session query sets its own focus policy (§8.5).
 - **A view that has data keeps showing it when a background refetch fails.** The error state appears only when there's nothing to show, so a failed refetch on tab focus can't unmount the book page and an open note form with it. A 404 still shows "Book not found".
+
+**Unexpected errors.** They all go to one function, `reportUnexpectedError` in `errorReporting.ts`. It writes to the console, and it's where an error service would be called; deployment is out of scope. Three sources reach it:
+- **Render errors.** An error boundary around the routes, inside `Layout`'s `<main>`, replaces only the page with "Something went wrong on this page.", Reload and Back to the catalog, so the header stays usable. Any navigation clears it: the boundary resets when the location's key changes while it shows its fallback, which covers going back to the catalog from a list at the same path. A second boundary around `App`, in `main.tsx`, catches the rest, such as the header or startup; its link is a plain `<a>`, because the router may be what failed. React still needs a class component for a boundary, so no dependency is added.
+- **Request code.** The cache hooks report an error that is neither an `ApiError` nor a network error: a bug in a query or mutation function, which the view's Retry would otherwise hide. API errors aren't reported here; the server logs its own 5xx (§4).
+- **Everything else.** Listeners for `error` and `unhandledrejection` on `window`, added in `main.tsx` before the first render.
 
 Hand-written `useEffect` fetching was rejected because it would mean writing request cancellation, race protection, caching and refetching ourselves, all of which are easy to get wrong. React Router loaders were rejected because they have no cache, would make every search pause a navigation, and fit inline note editing poorly.
 
@@ -811,3 +816,4 @@ There are no automated browser end-to-end tests: they would need both servers an
 **Settled during final integration (Phase 7):**
 - **Logging** (§4). The request filter sits on the console handler, not on a logger, because a logger's filters only see records created on that logger, not those that propagate to it from `django.request`. `django.server` is declared again as Django's default declares it, so runserver's request lines keep their own format. The filter never raises: a filter's exception isn't caught by the logging module, and loading the user fails when the database does.
 - **JSON errors** (§7.3). The catch-all is a plain Django view, so it stays out of the schema, and it's exempt from Django's CSRF middleware. DRF exempts its own views and checks CSRF itself, in JSON; without the exemption, a write to an unknown path would get the middleware's HTML 403. It reads and changes nothing.
+- **Error boundaries** (§8.4). The fallback is one component, `ErrorFallback`, given the link that suits each boundary. The reporting function is named `reportUnexpectedError`, not `reportError`, so a module that forgets to import it fails to compile instead of calling the browser's global `reportError`.
