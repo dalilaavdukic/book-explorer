@@ -88,6 +88,7 @@ function BookResults({ params, listUrl }: BookResultsProps) {
                 <Link
                   to={`/books/${book.id}`}
                   state={{ listSearch: listUrl.listSearch }}
+                  className={styles.link}
                 >
                   {book.title}
                 </Link>
