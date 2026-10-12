@@ -5,14 +5,19 @@ from rest_framework import generics, status
 
 from catalog.models import Book
 from config.pagination import StrictPageNumberPagination
+from config.schema import (
+    CSRF_FAILED,
+    NOT_LOGGED_IN,
+    detail_error,
+    invalid_body,
+    invalid_parameters,
+)
 
 from .models import Note
-from .serializers import DetailSerializer, NoteSerializer
+from .serializers import NoteSerializer
 
-ERRORS = {
-    status.HTTP_401_UNAUTHORIZED: DetailSerializer,
-    status.HTTP_404_NOT_FOUND: DetailSerializer,
-}
+NO_SUCH_NOTE = detail_error("No such note among the reader's own.")
+INVALID_NOTE = invalid_body("A field is invalid, or the body isn't JSON.")
 
 
 class NotePagination(StrictPageNumberPagination):
@@ -23,10 +28,25 @@ class NotePagination(StrictPageNumberPagination):
 # not under "books" as their path would.
 @extend_schema_view(
     get=extend_schema(
-        tags=["notes"], responses={status.HTTP_200_OK: NoteSerializer, **ERRORS}
+        tags=["notes"],
+        responses={
+            status.HTTP_200_OK: NoteSerializer,
+            status.HTTP_400_BAD_REQUEST: invalid_parameters("`page_size` is invalid."),
+            status.HTTP_401_UNAUTHORIZED: NOT_LOGGED_IN,
+            status.HTTP_404_NOT_FOUND: detail_error(
+                "No such book, or the page is past the last one."
+            ),
+        },
     ),
     post=extend_schema(
-        tags=["notes"], responses={status.HTTP_201_CREATED: NoteSerializer, **ERRORS}
+        tags=["notes"],
+        responses={
+            status.HTTP_201_CREATED: NoteSerializer,
+            status.HTTP_400_BAD_REQUEST: INVALID_NOTE,
+            status.HTTP_401_UNAUTHORIZED: NOT_LOGGED_IN,
+            status.HTTP_403_FORBIDDEN: CSRF_FAILED,
+            status.HTTP_404_NOT_FOUND: detail_error("No such book."),
+        },
     ),
 )
 class BookNoteListView(generics.ListCreateAPIView):
@@ -52,9 +72,30 @@ class BookNoteListView(generics.ListCreateAPIView):
 
 
 @extend_schema_view(
-    get=extend_schema(responses={status.HTTP_200_OK: NoteSerializer, **ERRORS}),
-    patch=extend_schema(responses={status.HTTP_200_OK: NoteSerializer, **ERRORS}),
-    delete=extend_schema(responses={status.HTTP_204_NO_CONTENT: None, **ERRORS}),
+    get=extend_schema(
+        responses={
+            status.HTTP_200_OK: NoteSerializer,
+            status.HTTP_401_UNAUTHORIZED: NOT_LOGGED_IN,
+            status.HTTP_404_NOT_FOUND: NO_SUCH_NOTE,
+        }
+    ),
+    patch=extend_schema(
+        responses={
+            status.HTTP_200_OK: NoteSerializer,
+            status.HTTP_400_BAD_REQUEST: INVALID_NOTE,
+            status.HTTP_401_UNAUTHORIZED: NOT_LOGGED_IN,
+            status.HTTP_403_FORBIDDEN: CSRF_FAILED,
+            status.HTTP_404_NOT_FOUND: NO_SUCH_NOTE,
+        }
+    ),
+    delete=extend_schema(
+        responses={
+            status.HTTP_204_NO_CONTENT: None,
+            status.HTTP_401_UNAUTHORIZED: NOT_LOGGED_IN,
+            status.HTTP_403_FORBIDDEN: CSRF_FAILED,
+            status.HTTP_404_NOT_FOUND: NO_SUCH_NOTE,
+        }
+    ),
 )
 class NoteDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = NoteSerializer

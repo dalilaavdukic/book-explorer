@@ -172,6 +172,7 @@ export interface components {
             readonly id: number;
             name: string;
         };
+        BadRequest: components["schemas"]["ValidationError"] | components["schemas"]["Detail"];
         Book: {
             readonly id: number;
             title: string;
@@ -255,6 +256,10 @@ export interface components {
             /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
             username: string;
         };
+        /** @description A list of messages for each invalid field, or `non_field_errors` for an error about the whole request. */
+        ValidationError: {
+            [key: string]: string[];
+        };
     };
     responses: never;
     parameters: never;
@@ -285,6 +290,24 @@ export interface operations {
                     "application/json": components["schemas"]["Session"];
                 };
             };
+            /** @description Wrong credentials, a missing field, or a body that isn't JSON. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            /** @description The CSRF token is missing or wrong. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Detail"];
+                };
+            };
         };
     };
     auth_logout_create: {
@@ -302,6 +325,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description The CSRF token is missing or wrong. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Detail"];
+                };
             };
         };
     };
@@ -346,6 +378,15 @@ export interface operations {
                     "application/json": components["schemas"]["Author"][];
                 };
             };
+            /** @description `search` or `limit` is invalid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
+            };
         };
     };
     authors_retrieve: {
@@ -365,6 +406,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Author"];
+                };
+            };
+            /** @description No such author. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Detail"];
                 };
             };
         };
@@ -415,6 +465,33 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedBookList"];
                 };
             };
+            /** @description A query parameter is invalid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
+            };
+            /** @description Not logged in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Detail"];
+                };
+            };
+            /** @description The page is past the last one. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Detail"];
+                };
+            };
         };
     };
     books_notes_list: {
@@ -441,6 +518,16 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedNoteList"];
                 };
             };
+            /** @description `page_size` is invalid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationError"];
+                };
+            };
+            /** @description Not logged in. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -449,6 +536,7 @@ export interface operations {
                     "application/json": components["schemas"]["Detail"];
                 };
             };
+            /** @description No such book, or the page is past the last one. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -482,6 +570,16 @@ export interface operations {
                     "application/json": components["schemas"]["Note"];
                 };
             };
+            /** @description A field is invalid, or the body isn't JSON. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            /** @description Not logged in. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -490,6 +588,16 @@ export interface operations {
                     "application/json": components["schemas"]["Detail"];
                 };
             };
+            /** @description The CSRF token is missing or wrong. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Detail"];
+                };
+            };
+            /** @description No such book. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -517,6 +625,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BookDetail"];
+                };
+            };
+            /** @description No such book. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Detail"];
                 };
             };
         };
@@ -559,6 +676,7 @@ export interface operations {
                     "application/json": components["schemas"]["Note"];
                 };
             };
+            /** @description Not logged in. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -567,6 +685,7 @@ export interface operations {
                     "application/json": components["schemas"]["Detail"];
                 };
             };
+            /** @description No such note among the reader's own. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -595,6 +714,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Not logged in. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -603,6 +723,16 @@ export interface operations {
                     "application/json": components["schemas"]["Detail"];
                 };
             };
+            /** @description The CSRF token is missing or wrong. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Detail"];
+                };
+            };
+            /** @description No such note among the reader's own. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -636,6 +766,16 @@ export interface operations {
                     "application/json": components["schemas"]["Note"];
                 };
             };
+            /** @description A field is invalid, or the body isn't JSON. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            /** @description Not logged in. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -644,6 +784,16 @@ export interface operations {
                     "application/json": components["schemas"]["Detail"];
                 };
             };
+            /** @description The CSRF token is missing or wrong. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Detail"];
+                };
+            };
+            /** @description No such note among the reader's own. */
             404: {
                 headers: {
                     [name: string]: unknown;

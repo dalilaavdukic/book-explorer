@@ -3,11 +3,12 @@ import re
 from django.db.models import Exists, OuterRef
 from django.db.models.functions import Lower
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny
 
 from config.pagination import StrictPageNumberPagination
+from config.schema import NOT_LOGGED_IN, detail_error, invalid_parameters
 
 from .filters import BOOK_ORDERINGS, AuthorFilter, BookFilter
 from .models import Author, Book, Genre
@@ -26,6 +27,16 @@ class BookPagination(StrictPageNumberPagination):
     page_size = 12
 
 
+@extend_schema(
+    responses={
+        status.HTTP_200_OK: BookSerializer,
+        status.HTTP_400_BAD_REQUEST: invalid_parameters(
+            "A query parameter is invalid."
+        ),
+        status.HTTP_401_UNAUTHORIZED: NOT_LOGGED_IN,
+        status.HTTP_404_NOT_FOUND: detail_error("The page is past the last one."),
+    }
+)
 class BookListView(generics.ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = BookSerializer
@@ -36,6 +47,12 @@ class BookListView(generics.ListAPIView):
     )
 
 
+@extend_schema(
+    responses={
+        status.HTTP_200_OK: BookDetailSerializer,
+        status.HTTP_404_NOT_FOUND: detail_error("No such book."),
+    }
+)
 class BookDetailView(generics.RetrieveAPIView):
     permission_classes = [AllowAny]
     serializer_class = BookDetailSerializer
@@ -54,7 +71,13 @@ class BookDetailView(generics.RetrieveAPIView):
             },
             description="The maximum number of suggestions.",
         )
-    ]
+    ],
+    responses={
+        status.HTTP_200_OK: AuthorSerializer,
+        status.HTTP_400_BAD_REQUEST: invalid_parameters(
+            "`search` or `limit` is invalid."
+        ),
+    },
 )
 class AuthorListView(generics.ListAPIView):
     permission_classes = [AllowAny]
@@ -82,6 +105,12 @@ class AuthorListView(generics.ListAPIView):
         return int(value)
 
 
+@extend_schema(
+    responses={
+        status.HTTP_200_OK: AuthorSerializer,
+        status.HTTP_404_NOT_FOUND: detail_error("No such author."),
+    }
+)
 class AuthorDetailView(generics.RetrieveAPIView):
     permission_classes = [AllowAny]
     serializer_class = AuthorSerializer

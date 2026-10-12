@@ -25,6 +25,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/Session'
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+          description: Wrong credentials, a missing field, or a body that isn't JSON.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: The CSRF token is missing or wrong.
   /api/auth/logout/:
     post:
       operationId: auth_logout_create
@@ -36,6 +48,12 @@ paths:
       responses:
         '204':
           description: No response body
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: The CSRF token is missing or wrong.
   /api/auth/session/:
     get:
       operationId: auth_session_retrieve
@@ -67,6 +85,7 @@ paths:
         name: search
         schema:
           type: string
+          maxLength: 100
         description: Text the author's name contains.
       tags:
       - authors
@@ -82,6 +101,12 @@ paths:
                 items:
                   $ref: '#/components/schemas/Author'
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+          description: '`search` or `limit` is invalid.'
   /api/authors/{id}/:
     get:
       operationId: authors_retrieve
@@ -103,6 +128,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Author'
           description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: No such author.
   /api/books/:
     get:
       operationId: books_list
@@ -145,10 +176,13 @@ paths:
         description: Number of results to return per page.
         schema:
           type: integer
+          minimum: 1
+          maximum: 100
       - in: query
         name: search
         schema:
           type: string
+          maxLength: 100
         description: Words that must all appear in the title or the author's name.
       - in: query
         name: sort
@@ -182,6 +216,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedBookList'
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+          description: A query parameter is invalid.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: Not logged in.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: The page is past the last one.
   /api/books/{book_id}/notes/:
     get:
       operationId: books_notes_list
@@ -203,6 +255,8 @@ paths:
         description: Number of results to return per page.
         schema:
           type: integer
+          minimum: 1
+          maximum: 100
       tags:
       - notes
       security:
@@ -214,18 +268,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedNoteList'
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+          description: '`page_size` is invalid.'
         '401':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Detail'
-          description: ''
+          description: Not logged in.
         '404':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Detail'
-          description: ''
+          description: No such book, or the page is past the last one.
     post:
       operationId: books_notes_create
       parameters:
@@ -251,18 +311,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/Note'
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+          description: A field is invalid, or the body isn't JSON.
         '401':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Detail'
-          description: ''
+          description: Not logged in.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: The CSRF token is missing or wrong.
         '404':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Detail'
-          description: ''
+          description: No such book.
   /api/books/{id}/:
     get:
       operationId: books_retrieve
@@ -284,6 +356,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/BookDetail'
           description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: No such book.
   /api/genres/:
     get:
       operationId: genres_list
@@ -326,13 +404,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Detail'
-          description: ''
+          description: Not logged in.
         '404':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Detail'
-          description: ''
+          description: No such note among the reader's own.
     patch:
       operationId: notes_partial_update
       parameters:
@@ -357,18 +435,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/Note'
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+          description: A field is invalid, or the body isn't JSON.
         '401':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Detail'
-          description: ''
+          description: Not logged in.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: The CSRF token is missing or wrong.
         '404':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Detail'
-          description: ''
+          description: No such note among the reader's own.
     delete:
       operationId: notes_destroy
       parameters:
@@ -389,13 +479,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Detail'
-          description: ''
+          description: Not logged in.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: The CSRF token is missing or wrong.
         '404':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Detail'
-          description: ''
+          description: No such note among the reader's own.
 components:
   schemas:
     Author:
@@ -410,6 +506,10 @@ components:
       required:
       - id
       - name
+    BadRequest:
+      oneOf:
+      - $ref: '#/components/schemas/ValidationError'
+      - $ref: '#/components/schemas/Detail'
     Book:
       type: object
       properties:
@@ -616,6 +716,14 @@ components:
       required:
       - id
       - username
+    ValidationError:
+      type: object
+      description: A list of messages for each invalid field, or `non_field_errors`
+        for an error about the whole request.
+      additionalProperties:
+        type: array
+        items:
+          type: string
   securitySchemes:
     cookieAuth:
       type: apiKey

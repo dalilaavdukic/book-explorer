@@ -1,6 +1,6 @@
 # Book Explorer: Architecture
 
-*Living document, last updated 2026-10-12 (Phase 7, page titles and focus). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
+*Living document, last updated 2026-10-12 (Phase 7, documented error responses). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
 
 ## 1. Purpose and status
 
@@ -299,6 +299,7 @@ This gives the frontend one rule: **any 401 means the reader is logged out** (§
 | 403 | CSRF check failed |
 | 404 | Doesn't exist or isn't yours; unknown book or author; page out of range |
 | 405 | Method not supported (e.g. PUT on a note) |
+| 415 | A request body that isn't JSON (a form, multipart or plain text) |
 | 500 | Never caused by anything the client sends (AC-S8). The one exception is in debug mode: with `DEBUG` on, more than 1,000 query parameters make Django's debug page fail, and the development server answers a plain-text 500. |
 
 Errors use DRF's standard shapes:
@@ -419,7 +420,9 @@ Pagination is chosen per endpoint, not set globally:
   - The repeated `genre` parameter is documented as an array of ids (`style: form`, `explode: true`). openapi-typescript turns it into a number array, and `URLSearchParams.append` sends it as repeated parameters.
   - Because pagination is set per view (§7.4), the book and notes lists are documented with the paginated envelope, and author suggestions and genres as plain arrays.
   - The author `search` parameter and the author detail endpoint are documented like the others.
-- **Some views need annotations.** drf-spectacular can't fully work out a few hand-written pieces, so they are annotated: the auth endpoints, the custom session authentication class, the author `limit` parameter (validated in the view rather than a FilterSet), and the documented 401 and 404 responses.
+  - **Every error response an operation can give is documented** (§7.3), with what causes it: 401 and 403 as `Detail` (`{"detail": …}`), 404 as `Detail`, and a 400 for query parameters as `ValidationError` (a list of messages per field). A 400 for a request body is `BadRequest`, either of the two, because a body that isn't JSON gets `{"detail": …}`. 415 and the JSON 404 for unknown paths aren't repeated on every operation.
+  - The bounds are in the schema too: `page_size` from 1 to 100, and `search` up to 100 characters.
+- **Some views need annotations.** drf-spectacular can't fully work out a few hand-written pieces, so they are annotated: the auth endpoints, the custom session authentication class, the author `limit` parameter (validated in the view rather than a FilterSet), the `search` length (django-filter's `max_length` doesn't reach the schema), the `page_size` bounds, and the error responses. The error components and helpers live in `config/schema.py`.
 
 ## 8. Frontend architecture
 
@@ -826,3 +829,4 @@ There are no automated browser end-to-end tests: they would need both servers an
 - **JSON parser.** `config.parsers.JSONParser` extends DRF's to turn the `RecursionError` that Python's decoder raises for deeply nested JSON into a 400 parse error. DRF catches only `ValueError`, so a body of about 100 KB of `[` was a 500 on every write, login included.
 - **A stale edit can't bring a note back.** `Model.save()` falls back to an INSERT when its UPDATE matches no row, so a PATCH that loaded a note just before a DELETE committed re-created it (seen in about one race in six). `Note.save` now raises `Note.DoesNotExist` when the stored row is gone, which the detail view answers with the same 404 as a missing note, and saves existing notes with `force_update`. A deletion in the instant between that check and the UPDATE then fails the request with a logged 500 instead of re-inserting the note.
 - **Note fields take only their JSON type.** DRF's `CharField` stores a number as text, and its `IntegerField` accepts `"5"`, `" 5 "` and `1.0`. `NoteSerializer` maps the model's text and integer fields to subclasses that accept only a JSON string and a JSON integer, so those get a 400 like any other invalid value (AC-N3). The schema is unchanged.
+- **Documented errors** (§7.7). `ValidationError`'s shape (`additionalProperties`) can't be expressed by a serializer, so a small drf-spectacular extension describes it. `Detail` moved from `notes` to `config/schema.py`, since every app uses it. The search filters declare their schema through `SearchFilter`, which sets the limit and the schema together.

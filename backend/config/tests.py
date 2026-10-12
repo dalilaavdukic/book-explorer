@@ -6,6 +6,7 @@ from django.contrib.auth.views import LoginView
 from django.db import DatabaseError
 from django.test import RequestFactory, SimpleTestCase, override_settings
 from django.utils.functional import SimpleLazyObject
+from drf_spectacular.generators import SchemaGenerator
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -293,3 +294,49 @@ class JsonParsingTests(APITestCase):
 
                 self.assert_parse_error(response)
         self.assertFalse(Note.objects.exists())
+
+
+class SchemaErrorResponseTests(SimpleTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.paths = SchemaGenerator().get_schema(request=None, public=True)["paths"]
+
+    def test_each_operation_documents_its_error_responses(self):
+        expected = {
+            ("/api/books/", "get"): {"200", "400", "401", "404"},
+            ("/api/books/{id}/", "get"): {"200", "404"},
+            ("/api/authors/", "get"): {"200", "400"},
+            ("/api/authors/{id}/", "get"): {"200", "404"},
+            ("/api/genres/", "get"): {"200"},
+            ("/api/auth/session/", "get"): {"200"},
+            ("/api/auth/login/", "post"): {"200", "400", "403"},
+            ("/api/auth/logout/", "post"): {"204", "403"},
+            ("/api/books/{book_id}/notes/", "get"): {"200", "400", "401", "404"},
+            ("/api/books/{book_id}/notes/", "post"): {
+                "201",
+                "400",
+                "401",
+                "403",
+                "404",
+            },
+            ("/api/notes/{id}/", "get"): {"200", "401", "404"},
+            ("/api/notes/{id}/", "patch"): {"200", "400", "401", "403", "404"},
+            ("/api/notes/{id}/", "delete"): {"204", "401", "403", "404"},
+        }
+        for (path, method), codes in expected.items():
+            with self.subTest(path=path, method=method):
+                self.assertEqual(set(self.paths[path][method]["responses"]), codes)
+
+    def test_page_size_and_search_document_their_bounds(self):
+        def parameter(path, name):
+            parameters = self.paths[path]["get"]["parameters"]
+            return next(p for p in parameters if p["name"] == name)["schema"]
+
+        for path in ("/api/books/", "/api/books/{book_id}/notes/"):
+            with self.subTest(path=path):
+                schema = parameter(path, "page_size")
+                self.assertEqual((schema["minimum"], schema["maximum"]), (1, 100))
+        for path in ("/api/books/", "/api/authors/"):
+            with self.subTest(path=path):
+                self.assertEqual(parameter(path, "search")["maxLength"], 100)

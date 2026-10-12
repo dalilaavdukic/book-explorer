@@ -33,7 +33,3 @@ class NoteSerializer(serializers.ModelSerializer):
         model = Note
         fields = ["id", "body", "page", "created_at", "edited_at"]
         read_only_fields = ["id", "created_at", "edited_at"]
-
-
-class DetailSerializer(serializers.Serializer):
-    detail = serializers.CharField()
