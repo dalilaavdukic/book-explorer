@@ -34,11 +34,12 @@ Every phase follows this loop:
 
 Phases 4 and 5 add a checkpoint inside step 4: build the backend and its tests, review them, fix and commit, then build the frontend. It isn't a separate phase and has no plan or approval of its own.
 
-**Commands.** Four project skills run the loop, and only the user starts them:
+**Commands.** Five project skills run the work, and only the user starts them:
 - `/plan-phase N`: steps 1–3. It writes the plan to `.claude/plans/phase-N.md`.
 - `/review-phase-plan N`: an independent review of the plan by the read-only `plan-reviewer` agent, before approval.
 - `/implement-phase N`: steps 4–9. It runs only if the plan's status line reads Approved. Re-running it resumes from the git state, including after compaction or in a new session.
 - `/review-phase-code N [backend]`: step 7, by the read-only `code-reviewer` agent. `backend` reviews the Phase 4/5 checkpoint.
+- `/assess-solution`: the Phase 7 assessment of the whole solution (implementation plan §5.7) by the read-only `solution-assessor` agent.
 
 Change a plan's status line to Approved only when the user explicitly approves the plan. Reviewer findings are proposals: show them to the user in full, apply only the ones the user approves, and record each round in the plan's review log.
 

@@ -274,7 +274,7 @@ The docs cite the employer's brief, `Development_Take-Home_Assignment.md`, which
 
 ## Development workflow
 
-The app is built with Claude Code, one phase at a time, following the loop in [`docs/implementation-plan.md`](docs/implementation-plan.md) §1. The project instructions are in [`CLAUDE.md`](CLAUDE.md). Four project commands in `.claude/skills/` run each phase:
+The app is built with Claude Code, one phase at a time, following the loop in [`docs/implementation-plan.md`](docs/implementation-plan.md) §1. The project instructions are in [`CLAUDE.md`](CLAUDE.md). Five project commands in `.claude/skills/` run the work:
 
 | Command | What it does |
 |---|---|
@@ -282,7 +282,8 @@ The app is built with Claude Code, one phase at a time, following the loop in [`
 | `/review-phase-plan N` | Has the `plan-reviewer` agent review the plan independently. |
 | `/implement-phase N` | Builds the phase from its approved plan, one step at a time, running each step's checks. |
 | `/review-phase-code N` | Has the `code-reviewer` agent review the phase's code independently. Adding `backend` reviews the backend checkpoint in Phases 4 and 5. |
+| `/assess-solution` | Has the `solution-assessor` agent assess the whole solution independently before submission: the assignment's requirements, the backend's robustness, the frontend and the docs. |
 
-- **Reviews are independent.** The two reviewer agents in `.claude/agents/` start without the conversation that produced the work, and judge it against the documents and the code. They can read files but not change them. They report numbered findings, keep correctness problems apart from preferences, and say whether the work is ready for approval. The developer decides which findings to apply.
+- **Reviews are independent.** The three agents in `.claude/agents/` (two reviewers and the solution assessor) start without the conversation that produced the work, and judge it against the documents and the code. They can read files but not change them. They report numbered findings, keep correctness problems apart from preferences, and say whether the work is ready. The developer decides which findings to apply.
 - **Approval gates implementation.** `/implement-phase` runs only once the plan is marked approved, and each phase is approved before the next one starts.
 - **Plans are working files.** Phase plans stay local in `.claude/plans/` and aren't committed. Each phase's decisions are recorded in `docs/` when the phase closes.
