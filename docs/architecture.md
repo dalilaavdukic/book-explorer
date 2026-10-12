@@ -624,7 +624,7 @@ There are about 10–20 targeted tests, aimed at behaviour that's easy to break 
 
 ### 9.3 Manual acceptance checklist
 
-There are no automated browser end-to-end tests: they would need both servers and a test database running in CI. Instead, Phase 6 walks through every user journey and acceptance criterion against the running app with a written checklist. That includes the cross-tab cases of AC-A8, which need two real tabs. Claude Code carries out the walkthrough through Playwright MCP wherever possible, and by hand otherwise (implementation plan §4); no browser test code is committed.
+There are no automated browser end-to-end tests: they would need both servers and a test database running in CI. Instead, Phase 7 walks through every user journey and acceptance criterion against the running app with a written checklist. That includes the cross-tab cases of AC-A8, which need two real tabs. Claude Code carries out the walkthrough through Playwright MCP wherever possible, and by hand otherwise (implementation plan §4); no browser test code is committed.
 
 ### 9.4 Code quality and CI
 

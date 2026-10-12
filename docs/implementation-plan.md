@@ -1,6 +1,6 @@
 # Book Explorer: Implementation Plan
 
-*Living document, last updated 2026-10-12 (Phase 5). Employer requirements: `Development_Take-Home_Assignment.md`. Product requirements: `docs/spec.md`. Technical design: `docs/architecture.md`.*
+*Living document, last updated 2026-10-12 (Phase 6, visual design, added). Employer requirements: `Development_Take-Home_Assignment.md`. Product requirements: `docs/spec.md`. Technical design: `docs/architecture.md`.*
 
 ## 1. Purpose and how this plan is used
 
@@ -44,7 +44,8 @@ The checkpoint isn't a separate phase. It has no detailed plan or formal approva
 | 3 Authentication | Complete, approved 2026-10-11 |
 | 4 User-specific notes | Complete, approved 2026-10-12 |
 | 5 Search, filtering and sorting | Complete, approved 2026-10-12 |
-| 6 Final integration and delivery | Not started |
+| 6 Visual design | Not started |
+| 7 Final integration and delivery | Not started |
 
 ## 2. Phases at a glance
 
@@ -55,7 +56,8 @@ The checkpoint isn't a separate phase. It has no detailed plan or formal approva
 | 3 Authentication | 401 session authentication, login and logout, CSRF, a single session state, the private-data cache boundary, demo users | 1, 2 |
 | 4 User-specific notes | Ownership-safe notes CRUD, paging, drafts at session boundaries | 2, 3 |
 | 5 Search, filtering and sorting | Search and filters, author and genre endpoints, the filter controls, "Books with my notes", the full list state in the URL | 2, 3, 4 |
-| 6 Final integration and delivery | Core acceptance walkthrough, optional enhancements, README, clean-clone check, submission | 1–5 |
+| 6 Visual design | A palette and shared styles, a tidier filter toolbar, a sticky header, styled cards, notes, states and login, and a genre panel that closes on an outside click | 1–5 |
+| 7 Final integration and delivery | Core acceptance walkthrough, optional enhancements, README, clean-clone check, submission | 1–6 |
 
 The order follows the dependencies:
 - Notes need authentication and books.
@@ -101,7 +103,7 @@ A phase is done when all of the following hold, in addition to the phase-specifi
 | Backend tests | Django's test runner with DRF `APITestCase` (architecture §9.1), including the migration tests for creating, rolling back and reapplying the seed | Locally and in CI | Catches regressions in authorization, security behaviour, validation, database integrity, API behaviour, queries and migrations |
 | Frontend tests | Vitest, React Testing Library and MSW (architecture §9.2) | Locally and in CI | Catches regressions in the API client, the 401 rule, private data and drafts at authentication boundaries, failed note changes, and URL state |
 | Contract checks | Regenerating `openapi.yaml` and the TypeScript types produces no diff (architecture §7.7) | Locally and in CI | Keeps the frontend's types in line with the API |
-| Browser checks | Claude Code drives the running app through **Playwright MCP**: navigating, clicking, typing, reading the accessibility tree, taking screenshots, using more than one tab | Claude Code session, against the local dev servers | Verifies the applicable user-facing acceptance criteria in each phase and in the Phase 6 checklist, whenever technically possible |
+| Browser checks | Claude Code drives the running app through **Playwright MCP**: navigating, clicking, typing, reading the accessibility tree, taking screenshots, using more than one tab | Claude Code session, against the local dev servers | Verifies the applicable user-facing acceptance criteria in each phase and in the Phase 7 checklist, whenever technically possible |
 | Manual testing | The user, in the running app | The running app | Usability, visual polish, and scenarios Playwright MCP can't verify reliably |
 
 - **The automated tests are mandatory in every phase.** Browser checks add to them; they never replace them.
@@ -261,7 +263,7 @@ A phase is done when all of the following hold, in addition to the phase-specifi
 - Started here and finished later:
   - AC-D3: the page only; finished in Phase 5
   - AC-M2: the catalog side; finished in Phase 4
-  - AC-M4: the README section; final pass in Phase 6
+  - AC-M4: the README section; final pass in Phase 7
 - J1, for the page number.
 
 **Done when**
@@ -337,7 +339,7 @@ A phase is done when all of the following hold, in addition to the phase-specifi
   - AC-A5: the server side here; Phase 4 shows that an old cookie is rejected by the notes API
   - AC-A7: the 401 mechanism here; the notes API in Phase 4
   - AC-A8: the cache boundary here; private data and drafts in Phases 4 and 5
-  - AC-U4: the README section; final pass in Phase 6
+  - AC-U4: the README section; final pass in Phase 7
 - Re-checked: AC-L3, under the new authentication class.
 - J3, from the header. J8 and J10 in part.
 
@@ -572,7 +574,54 @@ A phase is done when all of the following hold, in addition to the phase-specifi
 - **Existing URLs keep working.** Phase 2's default order becomes `sort=title`, and URLs from before behave exactly as they did.
 - **`has_notes` stays in one FilterSet method.** It is the catalog's only dependency on notes (architecture §2).
 
-### 5.6 Phase 6 — Final integration and delivery
+### 5.6 Phase 6 — Visual design
+
+**Objective.** Give the finished core a deliberate, consistent look, without changing what it does except where an item below says so.
+
+**Ground rules**
+
+- No new dependencies: SCSS modules, the shared variables, the system font stack and inline SVG icons (architecture §3). No dark theme.
+- Nothing behaves differently unless an item deliberately changes it, and each such change has a test.
+- Markup changes stay small, so the tests keep finding elements by role and accessible name.
+- Text meets WCAG AA contrast, the edges of controls reach 3:1 (WCAG 1.4.11), and keyboard focus stays visible and is never hidden under the header (WCAG 2.4.11).
+- The layout works at phone width. Book cards stay text only (spec §3).
+
+**Deliverables**, in build order
+
+- **Design variables:** a palette (an ink-blue header `#1d3346`, a teal accent `#0b6e69`, an amber mark `#e9b44c`, a warm paper background `#f8f6f1`, and tints for badges and states), a type scale, shadows, corner radii and one control height. They live in `_variables.scss`, with shared mixins.
+- **Controls and buttons:** one style for every input, the select and the Genres button; default, primary, danger and text buttons; consistent hover, focus and disabled states.
+- **Filter toolbar:** the controls in one aligned panel that wraps on narrow screens, with the sort `<select>` restyled to match.
+- **Author and search fields:** the author's Clear button becomes an × inside the field. It stays a real button named "Clear author" and still returns focus to the input. The search box's native × is restyled to match; Firefox shows none.
+- **Genre filter:** styled as a dropdown with a chevron. The panel also closes on a click outside it, or when focus leaves the control.
+- **Header:** sticky, with a wordmark and the account controls. `scroll-padding-top` keeps a focused element clear of it. No footer.
+- **Book list:** refined cards, each clickable as a whole, with one badge colour for every genre.
+- **Detail page:** one column, the book's facts as chips, notes as cards with quiet Edit and Delete buttons, and a styled delete dialog.
+- **States and login:** styled loading, empty, error and not-found views, and a styled login page. No skeleton loaders.
+- **Finishing touches:** a book favicon in place of Vite's, a checkbox accent colour, short transitions that respect reduced motion, and balanced wrapping for titles.
+
+**Sort decision.** The user judges the restyled sort `<select>` in the browser once the toolbar is built. If it's kept, nothing changes. Otherwise the phase plan is amended to a field select plus A–Z / Z–A radios, with their tests and an update to architecture §8.8.
+
+**Tests**
+
+- **Genre filter:** a click outside closes the panel, focus leaving the control closes it, and moving between checkboxes or clicking inside keeps it open.
+- **Browser only**, because jsdom has no layout: clicking anywhere on a card opens the book, and a focused element is never hidden under the sticky header.
+- Every existing test still passes. A query broken by a markup change is updated deliberately, never loosened.
+
+**Depends on.** Phases 1–5: it styles finished screens.
+
+**Acceptance criteria.** None new. Every criterion verified so far still holds. The user judges the look by hand (§9, D4).
+
+**Done when**
+
+- Every view is checked in the browser at 1280 px and 390 px, logged out and as a reader.
+- Architecture §8.8 and §10, and the README, describe the shared styles, the palette's contrast ratios and the genre panel's closing rule.
+
+**Sequencing**
+
+- The variables and control styles come first; every other item uses them.
+- The toolbar comes next, so the sort decision is made early.
+
+### 5.7 Phase 7 — Final integration and delivery
 
 **Objective.** Prove the whole application meets the spec on a clean machine, finish the documentation, and submit.
 
@@ -610,7 +659,7 @@ A phase is done when all of the following hold, in addition to the phase-specifi
    - **Clean clone:** follow the README word for word from a fresh clone.
    - **Submit:** get CI green on the final commit, push, and give reviewers access.
 
-**Depends on.** Phases 1–5.
+**Depends on.** Phases 1–6.
 
 **Acceptance criteria.** All of them, verified end to end. AC-M4 and AC-U4 in their final form. AC-X1 and AC-X2 if built.
 
@@ -661,14 +710,14 @@ Where a criterion spans phases, it is finished in the last phase listed.
 | AC-M1 | 2 | BE |
 | AC-M2 | 2 → 4 | BE |
 | AC-M3 | 2 | BE (round trip), review |
-| AC-M4 | 2 → 6 | README |
+| AC-M4 | 2 → 7 | README |
 | AC-A1, AC-A3, AC-A4, AC-A6 | 3 | Browser |
 | AC-A2 | 3 | BE, Browser |
 | AC-A5 | 3 → 4 | BE |
 | AC-A7 | 3 → 4 | BE, FE, Browser |
 | AC-A8 | 3 → 4 → 5 | FE, Browser (two tabs), Manual (focus re-check) |
 | AC-U1–U3 | 3 | BE |
-| AC-U4 | 3 → 6 | README |
+| AC-U4 | 3 → 7 | README |
 | AC-N1, AC-N6, AC-N7, AC-N8 | 4 | BE |
 | AC-N2 | 4 | BE, FE |
 | AC-N3, AC-N4 | 4 | BE, Browser |
@@ -682,8 +731,8 @@ Where a criterion spans phases, it is finished in the last phase listed.
 | AC-S6, AC-S9 | 5 | FE |
 | AC-S7 | 5 | Browser |
 | AC-S10 | 5 | BE, FE, Browser |
-| AC-X1 (optional) | 6 | BE (query count), FE, Browser |
-| AC-X2 (optional) | 6 | Browser |
+| AC-X1 (optional) | 7 | BE (query count), FE, Browser |
+| AC-X2 (optional) | 7 | Browser |
 
 **User journeys**
 
@@ -696,7 +745,7 @@ Where a criterion spans phases, it is finished in the last phase listed.
 | J8 | 3 → 4 → 5 |
 | J10 | 3 → 4 |
 
-Every journey is walked through end to end in Phase 6.
+Every journey is walked through end to end in Phase 7.
 
 **Other core items** (spec §3)
 - Django admin: books in Phase 2, notes in Phase 4.
@@ -713,17 +762,19 @@ Every journey is walked through end to end in Phase 6.
 | The schema and generated types drift apart | The frontend compiles against an API that no longer exists | The pipeline and CI drift checks exist from Phase 1, and every API change regenerates both |
 | Phases 4 and 5 are large | Authorization bugs found late, after UI is built on them | A backend checkpoint inside each phase |
 | Optional work destabilizes the core | A broken submission | Enhancements come only after a verified, tagged core |
+| The visual pass changes behaviour or markup the tests rely on | Regressions hidden behind a new look | Phase 6 changes behaviour only where an item says so, each with a test; markup changes stay small, and tests keep finding elements by role and name |
 
 ## 9. Decisions recorded in this plan
 
 | ID | Decision | Why |
 |---|---|---|
-| D1 | A private GitHub repository with GitHub Actions from Phase 1, including the schema and type drift checks. Every phase is approved on a green CI run. In Phase 6 the repository is shared with reviewers or made public. | Clean-machine problems (a missing pin, a forgotten migration, stale types) show up in the phase that causes them, not at submission |
+| D1 | A private GitHub repository with GitHub Actions from Phase 1, including the schema and type drift checks. Every phase is approved on a green CI run. In Phase 7 the repository is shared with reviewers or made public. | Clean-machine problems (a missing pin, a forgotten migration, stale types) show up in the phase that causes them, not at submission |
 | D2 | Phases 4 and 5 each have one detailed plan and one approval. Each includes a lightweight backend checkpoint before any UI work: a focused review, then fixes and a commit. The checkpoint has no plan or approval of its own (§1). | Authorization and query correctness are reviewed before UI is built on them, without turning each phase into two |
-| D3 | Enhancements are an optional step in Phase 6, after the core checklist passes and the core is tagged. AC-X2 comes before AC-X1. | A submittable core exists before any optional work. AC-X1 goes last because it changes the private-data boundary. |
-| D4 | In each phase and in the Phase 6 checklist, Claude Code verifies the applicable user-facing acceptance criteria through Playwright MCP whenever technically possible, and records the results. The user also tests by hand, especially usability, visual polish and scenarios flagged as not reliably verifiable by automation. A tooling limitation is flagged, never treated as a blocker. | User-facing behaviour is checked in a real browser without maintaining an end-to-end suite, and people cover what automation can't judge |
+| D3 | Enhancements are an optional step in Phase 7, after the core checklist passes and the core is tagged. AC-X2 comes before AC-X1. | A submittable core exists before any optional work. AC-X1 goes last because it changes the private-data boundary. |
+| D4 | In each phase and in the Phase 7 checklist, Claude Code verifies the applicable user-facing acceptance criteria through Playwright MCP whenever technically possible, and records the results. The user also tests by hand, especially usability, visual polish and scenarios flagged as not reliably verifiable by automation. A tooling limitation is flagged, never treated as a blocker. | User-facing behaviour is checked in a real browser without maintaining an end-to-end suite, and people cover what automation can't judge |
 | D5 | Playwright MCP is configured at local scope, outside the repository | The repository and reviewer setup stay unchanged |
 | D6 | Each phase is built on its own branch (`phase-N-<name>`) with a pull request that runs CI. After the phase is approved, the user merges it with GitHub's merge button, never squashing. | The user reviews each phase's diff on GitHub, and `main` only ever holds approved phases. Every commit is kept, each merge commit marks where a phase ends, and CI runs on the pull request and again on `main` |
+| D7 | A visual design phase (Phase 6) comes after the core features and before final integration, which becomes Phase 7. Its scope was agreed on 2026-10-12 (§5.6). | The core was built with plain styling; the look now matters for the submission. Because it comes before the acceptance walkthrough, the final checklist verifies the app as it is submitted. |
 
 ## 10. Deferred to phase planning
 
@@ -742,5 +793,9 @@ Left open on purpose. Each item is decided in the detailed plan for the phase na
   - wording of UI copy and error messages
   - exact test cases beyond the priorities in architecture §9
 - **Phase 6:**
+  - the exact values of the type scale, shadows and tints, and their contrast ratios
+  - where the shared mixins live, and how components choose a button style
+  - whether the restyled sort `<select>` stays: the user decides in the browser during the phase (§5.6)
+- **Phase 7:**
   - the format of the acceptance checklist
   - whether the repository is made public or shared privately with reviewers

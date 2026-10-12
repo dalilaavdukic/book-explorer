@@ -46,14 +46,14 @@ Change a plan's status line to Approved only when the user explicitly approves t
 
 **Browser checks.** Verify user-facing criteria with Playwright MCP against the app at `http://localhost:5173`. If it can't verify a scenario reliably, flag the scenario for manual testing by the user; a tooling limitation never blocks a phase. Browser checks add to the automated tests and never replace them. Screenshots and browser test code are never committed.
 
-**Reporting.** When closing a phase, report each acceptance criterion with its result, how it was verified, and any limitation still outstanding. The durable record is the Phase 6 checklist, `docs/acceptance-checklist.md`.
+**Reporting.** When closing a phase, report each acceptance criterion with its result, how it was verified, and any limitation still outstanding. The durable record is the Phase 7 checklist, `docs/acceptance-checklist.md`.
 
 Never say a test or check passed unless it ran and you saw its output. State what was skipped, and why.
 
 ## Engineering guardrails
 
 - Prefer the simplest design that meets the spec: DRF generic views and viewsets, no service or repository layers, no speculative abstractions.
-- Build only the current phase. Work pulled into an earlier phase is exactly what plan §6 lists. The enhancements (AC-X1, AC-X2) wait for Phase 6, after the core is tagged.
+- Build only the current phase. Work pulled into an earlier phase is exactly what plan §6 lists. The enhancements (AC-X1, AC-X2) wait for Phase 7, after the core is tagged.
 - Use only the libraries and tools approved in architecture §3, each added in the phase that first needs it. Any other dependency, service or infrastructure needs approval.
 - Authorization lives on the server (architecture §6.5, §6.6). Endpoints require login by default; public ones, such as the catalog, opt in and work without logging in. A logged-out request to a protected endpoint, or for personalized results (`has_notes=true`), gets 401; a failed CSRF check gets 403. A logged-in reader can list and create only their own notes on a book. Every notes query starts from the reader's own notes, so another reader's individual note returns 404 (AC-N6). A note's owner comes from the session and its book from the URL.
 - Private data in the browser (architecture §8.5, AC-A8): private query keys go under the reader's `private` root, and every change of reader goes through the single session-transition function. One reader must never see another's notes, personalized results or unsaved draft.
