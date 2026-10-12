@@ -1,4 +1,14 @@
-import { type Ref, useEffect, useEffectEvent, useState } from "react";
+import {
+  type Ref,
+  useEffect,
+  useEffectEvent,
+  useId,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
+import { CloseIcon } from "../components/icons.tsx";
+import styles from "./SearchBox.module.scss";
 
 const PAUSE_MS = 300;
 
@@ -25,6 +35,9 @@ interface Box {
  * search changes for another reason (Back, Forward, a link).
  */
 export default function SearchBox({ search, onSearch, ref }: SearchBoxProps) {
+  const id = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  useImperativeHandle(ref, () => inputRef.current!, []);
   const [box, setBox] = useState<Box>({
     text: search,
     pending: false,
@@ -60,19 +73,47 @@ export default function SearchBox({ search, onSearch, ref }: SearchBoxProps) {
   }, [box.pending, box.text]);
 
   return (
-    <label>
-      Search
-      <input
-        ref={ref}
-        type="search"
-        value={box.text}
-        maxLength={100}
-        placeholder="Title or author"
-        onChange={(event) => {
-          const text = event.target.value;
-          setBox((current) => ({ ...current, text, pending: true }));
-        }}
-      />
-    </label>
+    <div className={styles.searchBox}>
+      <label className={styles.label} htmlFor={`${id}-input`}>
+        Search
+      </label>
+      <div className={styles.field}>
+        <input
+          ref={inputRef}
+          id={`${id}-input`}
+          type="search"
+          value={box.text}
+          maxLength={100}
+          placeholder="Title or author"
+          onChange={(event) => {
+            const text = event.target.value;
+            setBox((current) => ({ ...current, text, pending: true }));
+          }}
+        />
+        {box.text !== "" && (
+          <button
+            type="button"
+            aria-label="Clear search"
+            className={styles.clear}
+            onClick={() => {
+              // Written at once: there's no typing to wait for.
+              setBox((current) => ({
+                ...current,
+                text: "",
+                pending: false,
+                written: "",
+              }));
+              if (search !== "") {
+                onSearch("");
+              }
+              // This button goes away with the text.
+              inputRef.current?.focus();
+            }}
+          >
+            <CloseIcon />
+          </button>
+        )}
+      </div>
+    </div>
   );
 }

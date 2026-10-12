@@ -591,7 +591,7 @@ A phase is done when all of the following hold, in addition to the phase-specifi
 - **Design variables:** a palette (an ink-blue header `#1d3346`, a teal accent `#0b6e69`, an amber mark `#e9b44c`, a warm paper background `#f8f6f1`, and tints for badges and states), a type scale, shadows, corner radii and one control height. They live in `_variables.scss`, with shared mixins.
 - **Controls and buttons:** one style for every input, the select and the Genres button; default, primary, danger and text buttons; consistent hover, focus and disabled states.
 - **Filter toolbar:** the controls in one aligned panel that wraps on narrow screens. The sort is a field `<select>` and a button that flips the direction (the sort decision below).
-- **Author and search fields:** the author's Clear button becomes an × inside the field. It stays a real button named "Clear author" and still returns focus to the input. The search box's native × is restyled to match; Firefox shows none.
+- **Author and search fields:** the author's Clear button becomes an × inside the field. It stays a real button named "Clear author" and still returns focus to the input. The search box gets the same ×, a button named "Clear search", in place of the browser's own, which Firefox doesn't draw (decided at the phase's close).
 - **Genre filter:** styled as a dropdown with a chevron. The panel also closes on a click outside it, or when focus leaves the control.
 - **Header:** sticky, with a wordmark and the account controls. `scroll-padding-top` keeps a focused element clear of it. No footer.
 - **Book list:** refined cards, each clickable as a whole, with one badge colour for every genre.

@@ -538,7 +538,7 @@ Rejected alternatives:
   - The exceptions are text being typed. The search box text is written to the URL after a 300 ms pause (AC-S9). The author selector's text never is: only the id of the author picked goes into the URL (AC-S10).
 - **Several genres are repeated parameters** (`?genre=2&genre=5`), read with `getAll`. They are written in ascending id order without duplicates, so a selection has exactly one URL and one cache key.
 - **The selected author is restored from its id.** The selector shows the name from `GET /api/authors/{id}/`, so a bookmarked `?author=12` works without downloading the author list. Suggestions are fetched with the same 300 ms pause and cached by search text. If the id doesn't exist, the book list's own 400 already shows "This link contains invalid filters" (§7.5).
-- **Typing replaces the current history entry.** Back doesn't step through "t", "to", "tol"…
+- **Typing replaces the current history entry.** Back doesn't step through "t", "to", "tol"… The search box's × replaces it too, writing the empty search at once.
 - **Changing a filter, the sort or the page adds a history entry**, so Back undoes one deliberate change at a time.
 - **Resets and clean-up:**
   - Changing search, filters or sort removes `page`, returning to page 1 (AC-S6).
@@ -600,8 +600,8 @@ Rejected alternatives:
     - That button's focus ring is teal, because the header's amber ring is 1.7:1 on the error's tint.
 - **Restyled native controls:**
   - **The `<select>`** has `appearance: none` and a chevron drawn as an SVG data URI.
-  - **The search box's ×** is a data URI of the same × the author field shows. It exists only in Chrome and Safari; Firefox has none.
-  - **Forced-colors mode** doesn't draw background images, so there both go back to their native appearance.
+  - **Forced-colors mode** doesn't draw background images, so there the select goes back to its native appearance.
+  - **The search box's ×** is the app's own button, named "Clear search", like the author field's "Clear author". It shows while the box has text, and returns focus to the box. The browser's own × is hidden: Chrome and Safari draw one and Firefox doesn't, so the box now looks the same in every browser.
   - **Icons in the markup** are inline SVG in `components/icons.tsx`. They're drawn in `currentColor`, so they stay visible in forced colors, and they're `aria-hidden`, so no accessible name changes.
 - **Accessibility through semantic HTML**, with no component library:
   - real `<label>` and `<button>` elements
@@ -779,7 +779,8 @@ There are no automated browser end-to-end tests: they would need both servers an
 - **The header's focus ring is amber** (6.9:1 on ink), because the teal ring is 2.1:1 there.
 - **Book cards are clickable as a whole** through a stretched link. The title link's `::after` covers the card, so each card still has one link, named by its title.
   - Trade-off: text in a card can't be selected by dragging, because the press lands on the link.
-- **Icons:** `components/icons.tsx` holds six inline SVG icons. The `<select>` chevron and the search box's × are CSS data URIs of the same shapes, because those elements can't hold markup.
+- **Icons:** `components/icons.tsx` holds six inline SVG icons. The `<select>` chevron is a CSS data URI of the same chevron, because a select can't hold markup.
+- **The search box has its own ×** instead of the browser's, which Firefox doesn't draw (§8.8).
 - **The genre panel's `relatedTarget` rule** (§8.8) has a test. jsdom's `blur()` moves focus to the document, so its `focusout` has a `null` `relatedTarget`, as a click on the panel's padding does in a browser.
 - **Sort.** The user judged the restyled six-option `<select>` in the browser and didn't keep it. The sort is now a field `<select>` plus one direction button (§8.8).
   - The URL's six `sort` values, their parsing and the default are unchanged.

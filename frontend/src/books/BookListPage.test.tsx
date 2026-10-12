@@ -188,6 +188,40 @@ test("the search box follows the URL on Back, without writing it again", async (
   expect(navigationType()).toBe("POP");
 });
 
+test("the search box's × clears the search at once, from page 1, replacing the history entry, and focuses the box", async () => {
+  const requests = serveBooks([hobbit]);
+  const { location, navigationType } = renderApp(
+    "/?search=hobbit&genre=2&page=2",
+  );
+  await screen.findByRole("link", { name: "The Hobbit" });
+
+  fireEvent.click(filters().getByRole("button", { name: "Clear search" }));
+
+  expect(location().search).toBe("?genre=2");
+  expect(navigationType()).toBe("REPLACE");
+  expect(searchBox()).toHaveValue("");
+  expect(searchBox()).toHaveFocus();
+  expect(filters().queryByRole("button", { name: "Clear search" })).toBeNull();
+  await waitFor(() => expect(requests).toHaveLength(2));
+  expect(requests[1].has("search")).toBe(false);
+  expect(requests[1].get("page")).toBe("1");
+});
+
+test("the search box's × shows only with text, and during the pause clears it without searching", async () => {
+  const requests = serveBooks([hobbit]);
+  const { location } = renderApp("/?genre=2");
+  await screen.findByRole("link", { name: "The Hobbit" });
+  expect(filters().queryByRole("button", { name: "Clear search" })).toBeNull();
+
+  typeSearch("dune");
+  fireEvent.click(filters().getByRole("button", { name: "Clear search" }));
+
+  expect(searchBox()).toHaveValue("");
+  await wait(PAUSE);
+  expect(location().search).toBe("?genre=2");
+  expect(requests.filter((params) => params.has("search"))).toEqual([]);
+});
+
 test("a sort chosen during the pause is kept when the search is written", async () => {
   serveBooks([hobbit]);
   const { location } = renderApp("/");

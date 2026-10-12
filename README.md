@@ -159,6 +159,7 @@ Above the book list are a search box, an author selector, a genre filter, the so
 
 **How the controls behave:**
 - The search runs after a 300 ms pause in typing, and typing doesn't add history entries. Every other change adds one, so Back undoes one change at a time.
+- The × in the search box clears it at once. Like typing, it doesn't add a history entry.
 - Changing the search, a filter or the sort goes back to page 1.
 - "Clear all" removes the search and every filter, and keeps the sort.
 
@@ -215,8 +216,7 @@ Above the book list are a search box, an author selector, a genre filter, the so
 **Genre panel.** Besides its own button and Escape, the panel closes on a click outside it, or when focus moves outside it. Clicking inside, including on its padding or heading, keeps it open.
 
 **Browser notes:**
-- Firefox shows no × in the search box.
-- In forced-colors mode (such as Windows High Contrast), the sort select and the search box's × go back to their native look.
+- In forced-colors mode (such as Windows High Contrast), the sort select goes back to its native look.
 
 **Checked** in Chrome at 1280 px and 390 px wide, logged out and as a reader, with the keyboard and with reduced motion. There's no horizontal scroll at phone width.
 
