@@ -104,10 +104,12 @@ No author differed. One article without an infobox (*The Sun Also Rises*) was ch
 
 ```bash
 python manage.py migrate catalog 0001  # remove the seeded books
-python manage.py migrate catalog       # load them again
+python manage.py migrate               # load them again
 ```
 
 Rolling back removes the seeded books, and the seeded authors and genres that no remaining book uses. Books added through Django admin are kept, with their authors and genres.
+
+**Rolling back also deletes every note.** The notes table depends on the seed, so Django drops it first, with all readers' notes, including notes on books added through admin. Re-applying needs the plain `migrate` above, which recreates the notes table as well; `migrate catalog` alone would leave it missing.
 
 ## Notes
 
