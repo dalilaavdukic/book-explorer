@@ -44,7 +44,7 @@ export default function BookFilters({
       />
       <AuthorFilter author={params.author} onChange={listUrl.setAuthor} />
       <GenreFilter selected={params.genre} onChange={listUrl.setGenres} />
-      <label>
+      <label className={styles.sort}>
         Sort by
         <select
           value={params.sort}

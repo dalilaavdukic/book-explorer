@@ -2,10 +2,12 @@
 @use "../styles/mixins" as *;
 
 .filters {
+  @include card;
   display: flex;
   flex-wrap: wrap;
   gap: $space-3 $space-4;
   align-items: flex-end;
+  padding: $space-4;
   margin-bottom: $space-6;
 
   > label:not(.checkbox) {
@@ -15,8 +17,22 @@
     font-weight: 600;
   }
 
-  input[type="search"] {
-    min-width: 16rem;
+  // The search box's label, which SearchBox renders.
+  > label:has(> input[type="search"]) {
+    flex: 3 1 14rem;
+
+    @include narrow {
+      flex-basis: 100%;
+    }
+  }
+}
+
+// Sort shares a row with Genres when both fit, and otherwise wraps rather
+// than cut its label short. The checkbox shares the last row with Clear all.
+.sort,
+.checkbox {
+  @include narrow {
+    flex: 1 1 auto;
   }
 }
 
@@ -24,7 +40,7 @@
   display: flex;
   gap: $space-2;
   align-items: center;
-  padding: $space-1 0;
+  min-height: $control-height;
 }
 
 .clearAll {

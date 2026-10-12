@@ -1,5 +1,6 @@
 import { useId, useRef, useState } from "react";
 import ErrorState from "../components/ErrorState.tsx";
+import { ChevronDownIcon } from "../components/icons.tsx";
 import LoadingState from "../components/LoadingState.tsx";
 import styles from "./GenreFilter.module.scss";
 import { useGenres } from "./queries.ts";
@@ -29,9 +30,11 @@ export default function GenreFilter({ selected, onChange }: GenreFilterProps) {
         type="button"
         aria-expanded={open}
         aria-controls={panelId}
+        className={styles.toggle}
         onClick={() => setOpen(!open)}
       >
         {selected.length > 0 ? `Genres (${selected.length})` : "Genres"}
+        <ChevronDownIcon className={styles.chevron} />
       </button>
       <div id={panelId} className={styles.panel} hidden={!open}>
         {/* Mounted only while open, so the list isn't fetched until needed. */}
