@@ -420,7 +420,7 @@ npm run generate:types
 
 CI regenerates both files and fails if either differs from the committed version.
 
-**URLs and errors.** Every API URL ends in a slash, `/api/docs/` and `/api/schema/` included. Without the slash, the API answers a JSON 404 rather than redirecting. Every error under `/api/` is JSON in DRF's shape, including unknown paths and, with debug mode off, server errors.
+**URLs and errors.** Every API URL ends in a slash, `/api/docs/` and `/api/schema/` included. Without the slash, the API answers a JSON 404 rather than redirecting. Every error under `/api/` is JSON in DRF's shape, including unknown paths and, with debug mode off, requests refused as suspicious and server errors.
 
 **Swagger UI** at `/api/docs/` uses the browser's session, so log in through the app first to try endpoints that need a login. If you log in through Swagger UI itself instead, reload the page before sending another POST, PATCH or DELETE: logging in issues a new CSRF token, and the page keeps sending the one it loaded with.
 
