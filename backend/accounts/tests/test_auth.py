@@ -66,6 +66,16 @@ class SessionEndpointTests(AuthTestCase):
 
         self.assertIsNone(self.session_user())
 
+    def test_changing_the_password_ends_the_readers_sessions(self):
+        self.client.force_login(self.alice)
+        self.alice.set_password("a-new-password")
+        self.alice.save()
+
+        self.assertIsNone(self.session_user())
+        book = Book.objects.first()
+        response = self.client.get(f"/api/books/{book.pk}/notes/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
 
 class LoginTests(AuthTestCase):
     def test_valid_credentials_log_the_reader_in(self):
