@@ -309,7 +309,7 @@ Errors use DRF's standard shapes:
 
 Every `/api/` error is JSON in these shapes, including those no DRF view answers:
 - **A path no route matches**, including an id that isn't a number, gets `{"detail": "Not found."}` from a catch-all route. API URLs end in a slash, so one without it gets this 404 rather than a redirect, which would turn a POST into a GET.
-- **A request Django refuses before any view** (a `Host` outside `ALLOWED_HOSTS`, a body over 2.5 MB, more than 1,000 fields) gets `{"detail": "Bad request."}`.
+- **A request Django refuses as suspicious** (a `Host` outside `ALLOWED_HOSTS`, a body over 2.5 MB, more than 1,000 fields) gets `{"detail": "Bad request."}`.
 - **An unexpected error** gets `{"detail": "A server error occurred."}`, and is logged with its traceback (§4).
 
 The last two come from `handler400` and `handler500`, which Django uses only with `DEBUG` off; with it on, it shows its debug page. Other paths, such as the admin, keep Django's own pages.
@@ -747,7 +747,7 @@ There are no automated browser end-to-end tests: they would need both servers an
 | A tab isn't told immediately about a login or logout in another tab | Until it notices (a 401, or the session re-check when it regains focus), it keeps showing its last state, including any open draft, and its requests run with whichever session the browser now holds | The server always answers for the browser's current session, so a stale tab can't reach data that session can't. Once it notices, the clean-up runs (§8.5). Cross-tab messaging (`BroadcastChannel`) would make it immediate, but isn't needed at this scale. |
 | The author combobox is built by hand | Its keyboard and screen-reader behaviour is ours to get right | One small component following the WAI-ARIA combobox pattern, with a keyboard test (§9.2); not worth an autocomplete dependency |
 | Generated types are only as accurate as the schema | A wrong annotation produces wrong types | Custom pieces are annotated deliberately; CI catches a stale schema, but not a wrong annotation |
-| No production hardening | Not deployable as is | Out of scope. Deployment would need HTTPS, `Secure` cookies, `DEBUG` off, a real `SECRET_KEY`, `ALLOWED_HOSTS`, a reverse proxy serving the SPA build, and rate limiting. |
+| No production hardening | Not deployable as is | Out of scope. Deployment would need HTTPS, `Secure` cookies, `DEBUG` off, a real `SECRET_KEY`, `ALLOWED_HOSTS`, a reverse proxy serving the SPA build, rate limiting, and `django.security` logging tuned for scanner traffic (§4). |
 
 **Settled during scaffolding (Phase 1):**
 - **Versions.**
