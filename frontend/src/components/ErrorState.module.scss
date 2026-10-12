@@ -1,17 +1,18 @@
 @use "../styles/variables" as *;
+@use "../styles/mixins" as *;
 
 .error {
+  @include notice($color-danger-tint, $color-danger);
   display: flex;
   flex-wrap: wrap;
   gap: $space-3;
   align-items: center;
+  justify-content: space-between;
   margin: $space-8 0;
-  padding: $space-3 $space-4;
-  border: 1px solid $color-danger;
-  border-radius: $radius;
 }
 
 .message {
   margin: 0;
+  font-weight: 600;
   color: $color-danger;
 }

@@ -1,6 +1,30 @@
 @use "../styles/variables" as *;
 
 .loading {
+  display: flex;
+  gap: $space-3;
+  align-items: center;
   margin: $space-8 0;
   color: $color-muted;
+
+  &::before {
+    flex-shrink: 0;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid $color-border;
+    border-top-color: $color-accent;
+    border-radius: 50%;
+    content: "";
+
+    // Without motion the ring stays still, and the text says what's happening.
+    @media (prefers-reduced-motion: no-preference) {
+      animation: spin 0.8s linear infinite;
+    }
+  }
+}
+
+@keyframes spin {
+  to {
+    rotate: 360deg;
+  }
 }

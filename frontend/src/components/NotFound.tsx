@@ -16,7 +16,9 @@ export default function NotFound({
     <section className={styles.notFound}>
       <h1>{title}</h1>
       <p>
-        <Link to={to}>{linkLabel}</Link>
+        <Link to={to} className={styles.link}>
+          {linkLabel}
+        </Link>
       </p>
     </section>
   );

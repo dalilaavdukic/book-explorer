@@ -46,6 +46,11 @@
   &[hidden] {
     display: none;
   }
+
+  // The loading and error states are spaced for a page, not a panel.
+  > * {
+    margin: 0;
+  }
 }
 
 .options {

@@ -2,8 +2,15 @@
 @use "../styles/mixins" as *;
 
 .login {
-  max-width: 22rem;
-  margin: 0 auto;
+  @include card;
+  max-width: 24rem;
+  margin: $space-8 auto 0;
+  padding: $space-8 $space-6;
+  box-shadow: $shadow-md;
+
+  h1 {
+    margin: 0 0 $space-6;
+  }
 }
 
 .form {
@@ -20,11 +27,13 @@
 }
 
 .error {
+  @include notice($color-danger-tint, $color-danger);
   margin: 0;
+  font-weight: 600;
   color: $color-danger;
 }
 
 .submit {
   @include button-primary;
-  align-self: flex-start;
+  width: 100%;
 }
