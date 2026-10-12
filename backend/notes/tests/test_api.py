@@ -47,6 +47,7 @@ class NoteBodyTests(NoteApiTestCase):
             ("empty", {"body": ""}),
             ("whitespace only", {"body": " \n\t \r\n "}),
             ("null", {"body": None}),
+            ("number", {"body": 5}),
             ("too long", {"body": "x" * 5001}),
         ]:
             with self.subTest(label):
@@ -76,7 +77,7 @@ class NoteBodyTests(NoteApiTestCase):
 
 class NotePageTests(NoteApiTestCase):
     def test_invalid_page_is_rejected(self):
-        for page in [0, -1, 1.5, "abc", 10001, True]:
+        for page in [0, -1, 1.5, 1.0, "abc", "5", " 5 ", 10001, True]:
             with self.subTest(page=page):
                 response = self.post({"body": "A note.", "page": page})
 
@@ -84,6 +85,18 @@ class NotePageTests(NoteApiTestCase):
                 self.assertIn("page", response.data)
 
         self.assertFalse(Note.objects.exists())
+
+    def test_edit_rejects_values_that_are_not_the_fields_json_type(self):
+        note = self.create_note()
+        for data in [{"body": 5}, {"page": "5"}, {"page": " 5 "}, {"page": 1.0}]:
+            with self.subTest(data=data):
+                response = self.patch(note, data)
+
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertEqual(set(response.data), set(data))
+
+        note.refresh_from_db()
+        self.assertEqual((note.body, note.page), ("A note.", 12))
 
     def test_page_with_thousands_of_digits_is_a_bad_request(self):
         response = self.client.post(
