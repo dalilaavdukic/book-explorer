@@ -1,10 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { type KeyboardEvent, useId, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import type { Author } from "../api/authors.ts";
 import { CloseIcon } from "../components/icons.tsx";
 import styles from "./AuthorFilter.module.scss";
 import { authorKeys, useAuthor, useAuthorSuggestions } from "./queries.ts";
-import { useDebouncedValue } from "./useDebouncedValue.ts";
 
 const PAUSE_MS = 300;
 
@@ -182,4 +181,16 @@ export default function AuthorFilter({ author, onChange }: AuthorFilterProps) {
       </p>
     </div>
   );
+}
+
+/** `value`, once it has stayed the same for `delayMs`. */
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(timer);
+  }, [value, delayMs]);
+
+  return debounced;
 }
