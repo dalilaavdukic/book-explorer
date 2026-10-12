@@ -1,0 +1,36 @@
+@use "../styles/variables" as *;
+@use "../styles/mixins" as *;
+
+// Laid out like the author field, whose × this one matches.
+.searchBox {
+  display: flex;
+  flex: 3 1 14rem;
+  flex-direction: column;
+  gap: $space-1;
+
+  @include narrow {
+    flex-basis: 100%;
+  }
+}
+
+.label {
+  font-weight: 600;
+}
+
+.field {
+  position: relative;
+
+  input {
+    width: 100%;
+    // Room for the clear button, whether or not it shows.
+    padding-right: 2rem + $space-2;
+  }
+}
+
+.clear {
+  @include button-icon;
+  position: absolute;
+  top: 50%;
+  right: $space-1;
+  translate: 0 -50%;
+}

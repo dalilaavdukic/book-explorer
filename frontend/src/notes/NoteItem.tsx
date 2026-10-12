@@ -39,7 +39,7 @@ export default function NoteItem({
     <li className={styles.note}>
       <p className={styles.body}>{note.body}</p>
       <p className={styles.meta}>
-        {page !== null && <span>p. {page}</span>}
+        {page !== null && <span className={styles.pageNumber}>p. {page}</span>}
         <Time value={note.created_at} />
         {note.edited_at !== null && (
           <span>
@@ -48,11 +48,17 @@ export default function NoteItem({
         )}
       </p>
       <div className={styles.actions}>
-        <button type="button" onClick={onEdit} disabled={!canEdit || deleting}>
+        <button
+          type="button"
+          className={styles.edit}
+          onClick={onEdit}
+          disabled={!canEdit || deleting}
+        >
           Edit
         </button>
         <button
           type="button"
+          className={styles.delete}
           onClick={() => dialog.current?.showModal()}
           disabled={!canDelete || deleting}
         >
@@ -75,6 +81,7 @@ export default function NoteItem({
           </button>
           <button
             type="button"
+            className={styles.confirmDelete}
             onClick={() => {
               dialog.current?.close();
               onDelete();

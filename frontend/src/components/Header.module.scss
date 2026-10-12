@@ -1,43 +1,128 @@
 @use "../styles/variables" as *;
+@use "../styles/mixins" as *;
 
+// The bar keeps one fixed height, which global.scss's scroll-padding-top
+// matches, so focus never lands under it.
 .header {
-  background: $color-surface;
-  border-bottom: 1px solid $color-border;
+  position: sticky;
+  top: 0;
+  z-index: $z-header;
+  color: $color-on-ink;
+  background: $color-ink;
+  box-shadow: $shadow-sm;
+
+  // Teal is 2.1:1 on ink; amber is 6.9:1.
+  :focus-visible {
+    @include focus-ring($color-mark);
+  }
 }
 
 .inner {
   display: flex;
-  flex-wrap: wrap;
-  gap: $space-3;
+  gap: $space-4;
   align-items: center;
   justify-content: space-between;
   max-width: $content-width;
+  height: $header-height;
   margin: 0 auto;
-  padding: $space-3 $space-4;
+  padding: 0 $space-4;
 }
 
 .brand {
-  font-size: 1.25rem;
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: $space-2;
+  align-items: center;
+  font-size: $text-xl;
   font-weight: 700;
-  color: $color-text;
+  color: $color-on-ink;
+  white-space: nowrap;
   text-decoration: none;
+  text-underline-offset: 0.2em;
+
+  &:hover {
+    color: $color-on-ink;
+    text-decoration: underline;
+    text-decoration-color: $color-mark;
+  }
+
+  @include narrow {
+    font-size: $text-lg;
+  }
+}
+
+.brandIcon {
+  width: 1.25em;
+  height: 1.25em;
+  color: $color-mark;
 }
 
 .account {
   display: flex;
-  flex-wrap: wrap;
   gap: $space-3;
   align-items: center;
-  justify-content: flex-end;
+  min-width: 0;
 }
 
 .username {
+  min-width: 0;
+  max-width: 10rem;
+  overflow: hidden;
   font-weight: 600;
+  color: $color-on-ink-muted;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  @include narrow {
+    max-width: 6rem;
+  }
 }
 
+// Outlined light buttons, for the Log in link and Log out.
+.button {
+  @include button-base;
+  flex-shrink: 0;
+  min-height: 2.25rem;
+  padding-inline: $space-3;
+  color: $color-on-ink;
+  background-color: transparent;
+  border-color: $color-on-ink-muted;
+
+  &:where(:hover:not(:disabled)) {
+    color: $color-on-ink;
+    background-color: rgb(255 255 255 / 0.12);
+    border-color: $color-on-ink;
+  }
+}
+
+// Under the bar rather than in it, so the bar's height never changes. It
+// covers the top of the content, so it can be dismissed.
 .error {
-  flex-basis: 100%;
-  margin: 0;
-  text-align: right;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  display: flex;
+  gap: $space-2;
+  align-items: center;
+  justify-content: center;
+  padding: $space-1 $space-4;
+  font-weight: 600;
   color: $color-danger;
+  background: $color-danger-tint;
+  border-bottom: 1px solid $color-danger;
+
+  p {
+    margin: 0;
+  }
+}
+
+.dismiss {
+  @include button-icon;
+  flex-shrink: 0;
+
+  // The header's amber ring is 1.7:1 on the danger tint; teal is 5.4:1.
+  &:focus-visible {
+    @include focus-ring;
+  }
 }

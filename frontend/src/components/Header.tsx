@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { logout, type User } from "../api/auth.ts";
 import { changeSession, useAuth } from "../auth/session.ts";
 import styles from "./Header.module.scss";
+import { BookIcon, CloseIcon } from "./icons.tsx";
 
 export default function Header() {
   const { user } = useAuth();
@@ -12,6 +14,7 @@ export default function Header() {
     <header className={styles.header}>
       <div className={styles.inner}>
         <Link to="/" className={styles.brand}>
+          <BookIcon className={styles.brandIcon} />
           Book Explorer
         </Link>
         {user !== null ? (
@@ -19,7 +22,11 @@ export default function Header() {
         ) : (
           // Hidden on the login page, which would otherwise return to itself.
           location.pathname !== "/login" && (
-            <Link to="/login" state={{ from: location }}>
+            <Link
+              to="/login"
+              state={{ from: location }}
+              className={styles.button}
+            >
               Log in
             </Link>
           )
@@ -31,7 +38,8 @@ export default function Header() {
 
 function Account({ user }: { user: User }) {
   const client = useQueryClient();
-  const { mutate, isPending, isError } = useMutation({
+  const logOutRef = useRef<HTMLButtonElement>(null);
+  const { mutate, reset, isPending, isError } = useMutation({
     mutationFn: logout,
     // Only once the server has ended the session (AC-A5).
     onSuccess: () => changeSession(client, null, { loggedOutHere: true }),
@@ -40,13 +48,31 @@ function Account({ user }: { user: User }) {
   return (
     <div className={styles.account}>
       <span className={styles.username}>{user.username}</span>
-      <button type="button" onClick={() => mutate()} disabled={isPending}>
+      <button
+        ref={logOutRef}
+        type="button"
+        className={styles.button}
+        onClick={() => mutate()}
+        disabled={isPending}
+      >
         Log out
       </button>
       {isError && (
-        <p role="alert" className={styles.error}>
-          Couldn't log out. Please try again.
-        </p>
+        <div className={styles.error}>
+          <p role="alert">Couldn't log out. Please try again.</p>
+          <button
+            type="button"
+            aria-label="Dismiss"
+            className={styles.dismiss}
+            onClick={() => {
+              reset();
+              // This button goes away with the message.
+              logOutRef.current?.focus();
+            }}
+          >
+            <CloseIcon />
+          </button>
+        </div>
       )}
     </div>
   );

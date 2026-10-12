@@ -1,6 +1,16 @@
 @use "../styles/variables" as *;
 
+// The message and any action are this flex column's items, so the action gets
+// its own line.
 .empty {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  align-items: center;
   margin: $space-8 0;
+  padding: $space-8 $space-6;
   color: $color-muted;
+  text-align: center;
+  border: 2px dashed $color-border;
+  border-radius: $radius-lg;
 }

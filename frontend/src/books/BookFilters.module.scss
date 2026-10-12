@@ -1,32 +1,43 @@
 @use "../styles/variables" as *;
+@use "../styles/mixins" as *;
 
 .filters {
+  @include card;
   display: flex;
   flex-wrap: wrap;
   gap: $space-3 $space-4;
   align-items: flex-end;
+  padding: $space-4;
   margin-bottom: $space-6;
 
-  > label:not(.checkbox) {
+  > label:not(.checkbox),
+  .sortField {
     display: flex;
     flex-direction: column;
     gap: $space-1;
     font-weight: 600;
   }
+}
 
-  input[type="search"],
-  select {
-    font: inherit;
-    font-weight: normal;
-    padding: $space-1 $space-2;
-    color: $color-text;
-    background: $color-background;
-    border: 1px solid $color-border;
-    border-radius: $radius;
-  }
+.sort {
+  display: flex;
+  gap: $space-2;
+  align-items: flex-end;
+}
 
-  input[type="search"] {
-    min-width: 16rem;
+.direction {
+  width: $control-height;
+  padding: 0;
+  font-size: $text-lg;
+}
+
+// Sort shares a row with Genres when both fit, and otherwise wraps rather
+// than cut its field short. The checkbox shares the last row with Clear all.
+.sort,
+.sortField,
+.checkbox {
+  @include narrow {
+    flex: 1 1 auto;
   }
 }
 
@@ -34,5 +45,9 @@
   display: flex;
   gap: $space-2;
   align-items: center;
-  padding: $space-1 0;
+  min-height: $control-height;
+}
+
+.clearAll {
+  @include button-text;
 }

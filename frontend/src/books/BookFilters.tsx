@@ -1,13 +1,16 @@
 import type { Ref } from "react";
 import { useAuth } from "../auth/session.ts";
+import { ArrowDownIcon, ArrowUpIcon } from "../components/icons.tsx";
 import AuthorFilter from "./AuthorFilter.tsx";
 import styles from "./BookFilters.module.scss";
 import GenreFilter from "./GenreFilter.tsx";
 import {
-  BOOK_SORT_LABELS,
+  BOOK_SORT_FIELDS,
   type BookListState,
   type BookListUrl,
-  type BookSort,
+  type BookSortField,
+  joinSort,
+  splitSort,
 } from "./listState.ts";
 import SearchBox from "./SearchBox.tsx";
 
@@ -33,6 +36,7 @@ export default function BookFilters({
     params.author !== null ||
     params.genre.length > 0 ||
     params.has_notes;
+  const { field, descending } = splitSort(params.sort);
 
   return (
     <div role="search" aria-label="Find books" className={styles.filters}>
@@ -44,22 +48,34 @@ export default function BookFilters({
       />
       <AuthorFilter author={params.author} onChange={listUrl.setAuthor} />
       <GenreFilter selected={params.genre} onChange={listUrl.setGenres} />
-      <label>
-        Sort by
-        <select
-          value={params.sort}
-          onChange={(event) =>
-            // The options are the labels' keys, so the value is a BookSort.
-            listUrl.setSort(event.target.value as BookSort)
-          }
+      <div className={styles.sort}>
+        <label className={styles.sortField}>
+          Sort by
+          <select
+            value={field}
+            onChange={(event) =>
+              listUrl.setSort(
+                // The options are the fields' keys.
+                joinSort(event.target.value as BookSortField, descending),
+              )
+            }
+          >
+            {Object.entries(BOOK_SORT_FIELDS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          aria-label={descending ? "Descending" : "Ascending"}
+          className={styles.direction}
+          onClick={() => listUrl.setSort(joinSort(field, !descending))}
         >
-          {Object.entries(BOOK_SORT_LABELS).map(([sort, label]) => (
-            <option key={sort} value={sort}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </label>
+          {descending ? <ArrowDownIcon /> : <ArrowUpIcon />}
+        </button>
+      </div>
       {user !== null && (
         <label className={styles.checkbox}>
           <input
@@ -71,7 +87,7 @@ export default function BookFilters({
         </label>
       )}
       {filtered && (
-        <button type="button" onClick={onClearAll}>
+        <button type="button" className={styles.clearAll} onClick={onClearAll}>
           Clear all
         </button>
       )}

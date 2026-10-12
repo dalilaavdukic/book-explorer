@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type KeyboardEvent, useId, useRef, useState } from "react";
 import type { Author } from "../api/authors.ts";
+import { CloseIcon } from "../components/icons.tsx";
 import styles from "./AuthorFilter.module.scss";
 import { authorKeys, useAuthor, useAuthorSuggestions } from "./queries.ts";
 import { useDebouncedValue } from "./useDebouncedValue.ts";
@@ -141,6 +142,7 @@ export default function AuthorFilter({ author, onChange }: AuthorFilterProps) {
           <button
             type="button"
             aria-label="Clear author"
+            className={styles.clear}
             onClick={() => {
               setText(null);
               onChange(null);
@@ -148,7 +150,7 @@ export default function AuthorFilter({ author, onChange }: AuthorFilterProps) {
               inputRef.current?.focus();
             }}
           >
-            Clear
+            <CloseIcon />
           </button>
         )}
       </div>

@@ -1,9 +1,16 @@
 @use "../styles/variables" as *;
+@use "../styles/mixins" as *;
 
 .form {
+  @include card;
   display: flex;
   flex-direction: column;
-  gap: $space-3;
+  gap: $space-4;
+  padding: $space-5;
+
+  @include narrow {
+    padding: $space-4;
+  }
 }
 
 .field {
@@ -14,20 +21,6 @@
   label {
     font-weight: 600;
   }
-
-  textarea,
-  input {
-    font: inherit;
-    padding: $space-2 $space-3;
-    color: $color-text;
-    background: $color-background;
-    border: 1px solid $color-border;
-    border-radius: $radius;
-  }
-
-  textarea {
-    resize: vertical;
-  }
 }
 
 .page {
@@ -36,10 +29,20 @@
 
 .error {
   margin: 0;
+  font-size: $text-sm;
   color: $color-danger;
+}
+
+.expired {
+  @include notice;
+  margin: 0;
 }
 
 .actions {
   display: flex;
   gap: $space-2;
+}
+
+.submit {
+  @include button-primary;
 }

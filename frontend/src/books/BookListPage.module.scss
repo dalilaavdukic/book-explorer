@@ -1,13 +1,15 @@
 @use "../styles/variables" as *;
+@use "../styles/mixins" as *;
 
 .total {
   margin: 0 0 $space-4;
+  font-size: $text-sm;
   color: $color-muted;
 }
 
 .list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
   gap: $space-4;
   padding: 0;
   margin: 0;
@@ -15,18 +17,54 @@
 }
 
 .item {
+  @include card;
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: $space-1;
-  padding: $space-4;
-  border: 1px solid $color-border;
-  border-radius: $radius;
+  padding: $space-5;
+  @include motion(box-shadow, border-color, translate);
+
+  &:hover {
+    border-color: $color-control-border;
+    box-shadow: $shadow-md;
+
+    @media (prefers-reduced-motion: no-preference) {
+      translate: 0 -2px;
+    }
+  }
 }
 
 .title {
   margin: 0;
-  font-size: 1.1rem;
-  line-height: 1.3;
+  font-size: $text-lg;
+}
+
+// The title link covers the whole card, so a click anywhere opens the book,
+// and its focus ring goes round the card. It stays the card's one link.
+.link {
+  color: $color-ink;
+  text-decoration: none;
+
+  &:hover {
+    color: $color-ink;
+    text-decoration: underline;
+  }
+
+  &::after {
+    position: absolute;
+    inset: 0;
+    border-radius: $radius-lg;
+    content: "";
+  }
+
+  &:focus-visible {
+    outline: none;
+
+    &::after {
+      @include focus-ring;
+    }
+  }
 }
 
 .meta,
@@ -35,15 +73,19 @@
 }
 
 .meta {
+  margin-bottom: $space-3;
+  font-size: $text-sm;
   color: $color-muted;
 }
 
 .genre {
   align-self: flex-start;
   margin-top: auto;
-  padding: 0 $space-2;
-  font-size: 0.85rem;
-  background: $color-surface;
-  border: 1px solid $color-border;
-  border-radius: $radius;
+  padding: $space-1 $space-3;
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: $leading-tight;
+  color: $color-accent-text;
+  background: $color-accent-tint;
+  border-radius: $radius-pill;
 }

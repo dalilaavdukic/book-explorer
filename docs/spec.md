@@ -345,7 +345,7 @@ All items below are resolved in `docs/architecture.md`.
 | Feature 1: user-specific book notes                                                  | §5.5                                                   |
 | Feature 2: filtering and sorting                                                     | §5.6                                                   |
 | Feature 3: basic search                                                              | §5.6                                                   |
-| GitHub repo with separate backend/frontend directories                               | Architecture, Phase 6                                  |
+| GitHub repo with separate backend/frontend directories                               | Architecture, Phase 7                                  |
 | README contents (setup, dependencies, seed data, feature design, assumptions, tests) | README; §2 and §7 supply the decisions and assumptions |
 
 

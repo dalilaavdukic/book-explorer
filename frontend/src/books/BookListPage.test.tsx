@@ -188,19 +188,51 @@ test("the search box follows the URL on Back, without writing it again", async (
   expect(navigationType()).toBe("POP");
 });
 
+test("the search box's × clears the search at once, from page 1, replacing the history entry, and focuses the box", async () => {
+  const requests = serveBooks([hobbit]);
+  const { location, navigationType } = renderApp(
+    "/?search=hobbit&genre=2&page=2",
+  );
+  await screen.findByRole("link", { name: "The Hobbit" });
+
+  fireEvent.click(filters().getByRole("button", { name: "Clear search" }));
+
+  expect(location().search).toBe("?genre=2");
+  expect(navigationType()).toBe("REPLACE");
+  expect(searchBox()).toHaveValue("");
+  expect(searchBox()).toHaveFocus();
+  expect(filters().queryByRole("button", { name: "Clear search" })).toBeNull();
+  await waitFor(() => expect(requests).toHaveLength(2));
+  expect(requests[1].has("search")).toBe(false);
+  expect(requests[1].get("page")).toBe("1");
+});
+
+test("the search box's × shows only with text, and during the pause clears it without searching", async () => {
+  const requests = serveBooks([hobbit]);
+  const { location } = renderApp("/?genre=2");
+  await screen.findByRole("link", { name: "The Hobbit" });
+  expect(filters().queryByRole("button", { name: "Clear search" })).toBeNull();
+
+  typeSearch("dune");
+  fireEvent.click(filters().getByRole("button", { name: "Clear search" }));
+
+  expect(searchBox()).toHaveValue("");
+  await wait(PAUSE);
+  expect(location().search).toBe("?genre=2");
+  expect(requests.filter((params) => params.has("search"))).toEqual([]);
+});
+
 test("a sort chosen during the pause is kept when the search is written", async () => {
   serveBooks([hobbit]);
   const { location } = renderApp("/");
   await screen.findByRole("link", { name: "The Hobbit" });
 
   typeSearch("dune");
-  fireEvent.change(sortBy(), { target: { value: "-year" } });
+  fireEvent.change(sortBy(), { target: { value: "year" } });
 
-  await waitFor(() =>
-    expect(location().search).toBe("?sort=-year&search=dune"),
-  );
+  await waitFor(() => expect(location().search).toBe("?sort=year&search=dune"));
   await wait(PAUSE);
-  expect(location().search).toBe("?sort=-year&search=dune");
+  expect(location().search).toBe("?sort=year&search=dune");
 });
 
 test("each genre chosen adds a history entry, in id order, from page 1", async () => {
@@ -273,22 +305,44 @@ test("a genre list that fails to load can be retried, and Escape closes it", asy
   );
 });
 
-test("choosing a sort goes to page 1, and the default sort leaves the URL", async () => {
+test("choosing a field keeps the direction, as a new history entry from page 1", async () => {
+  const requests = serveBooks([hobbit], 30);
+  const { location, navigationType } = renderApp("/?sort=-title&page=2");
+  await screen.findByRole("link", { name: "The Hobbit" });
+
+  fireEvent.change(sortBy(), { target: { value: "author" } });
+
+  await waitFor(() => expect(location().search).toBe("?sort=-author"));
+  expect(navigationType()).toBe("PUSH");
+  expect(sortBy()).toHaveDisplayValue("Author");
+  expect(
+    screen.getByRole("button", { name: "Descending" }),
+  ).toBeInTheDocument();
+  await waitFor(() =>
+    expect(requests.map(String)).toEqual([
+      "page=2&page_size=12&sort=-title",
+      "page=1&page_size=12&sort=-author",
+    ]),
+  );
+});
+
+test("the direction button flips the order from page 1, and the default order leaves the URL", async () => {
   const requests = serveBooks([hobbit], 30);
   const { location, navigationType } = renderApp("/?page=2");
   await screen.findByRole("link", { name: "The Hobbit" });
 
-  fireEvent.change(sortBy(), { target: { value: "-year" } });
-  await waitFor(() => expect(location().search).toBe("?sort=-year"));
+  fireEvent.click(screen.getByRole("button", { name: "Ascending" }));
+  await waitFor(() => expect(location().search).toBe("?sort=-title"));
   expect(navigationType()).toBe("PUSH");
-  expect(sortBy()).toHaveDisplayValue("Year, newest first");
-  fireEvent.change(sortBy(), { target: { value: "title" } });
+  expect(sortBy()).toHaveDisplayValue("Title");
+  fireEvent.click(screen.getByRole("button", { name: "Descending" }));
   await waitFor(() => expect(location().search).toBe(""));
 
+  expect(screen.getByRole("button", { name: "Ascending" })).toBeInTheDocument();
   await waitFor(() =>
     expect(requests.map(String)).toEqual([
       "page=2&page_size=12",
-      "page=1&page_size=12&sort=-year",
+      "page=1&page_size=12&sort=-title",
       "page=1&page_size=12",
     ]),
   );
@@ -379,7 +433,10 @@ test("going back from a book restores the controls and the results at once", asy
   expect(
     screen.getByRole("button", { name: "Genres (1)" }),
   ).toBeInTheDocument();
-  expect(sortBy()).toHaveValue("-year");
+  expect(sortBy()).toHaveValue("year");
+  expect(
+    screen.getByRole("button", { name: "Descending" }),
+  ).toBeInTheDocument();
   expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
   await refetch.arrived;
   expect(screen.getByRole("link", { name: "The Hobbit" })).toBeInTheDocument();

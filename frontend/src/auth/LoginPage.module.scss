@@ -1,8 +1,16 @@
 @use "../styles/variables" as *;
+@use "../styles/mixins" as *;
 
 .login {
-  max-width: 22rem;
-  margin: 0 auto;
+  @include card;
+  max-width: 24rem;
+  margin: $space-8 auto 0;
+  padding: $space-8 $space-6;
+  box-shadow: $shadow-md;
+
+  h1 {
+    margin: 0 0 $space-6;
+  }
 }
 
 .form {
@@ -16,23 +24,16 @@
   flex-direction: column;
   gap: $space-1;
   font-weight: 600;
-
-  input {
-    font: inherit;
-    font-weight: normal;
-    padding: $space-2 $space-3;
-    color: $color-text;
-    background: $color-background;
-    border: 1px solid $color-border;
-    border-radius: $radius;
-  }
 }
 
 .error {
+  @include notice($color-danger-tint, $color-danger);
   margin: 0;
+  font-weight: 600;
   color: $color-danger;
 }
 
 .submit {
-  align-self: flex-start;
+  @include button-primary;
+  width: 100%;
 }

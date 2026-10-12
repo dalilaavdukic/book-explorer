@@ -1,23 +1,55 @@
 @use "../styles/variables" as *;
+@use "../styles/mixins" as *;
 
 .genreFilter {
   position: relative;
+
+  @include narrow {
+    flex: 1 1 auto;
+  }
+}
+
+.toggle {
+  @include control;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+
+  @include narrow {
+    width: 100%;
+  }
+}
+
+.chevron {
+  width: 1rem;
+  height: 1rem;
+  color: $color-muted;
+  @include motion(rotate);
+
+  .toggle[aria-expanded="true"] & {
+    rotate: 180deg;
+  }
 }
 
 .panel {
+  @include card;
   position: absolute;
-  z-index: 1;
+  z-index: $z-dropdown;
   top: calc(100% + #{$space-1});
   left: 0;
   min-width: 14rem;
-  padding: $space-3;
-  background: $color-background;
-  border: 1px solid $color-border;
-  border-radius: $radius;
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
+  max-width: calc(100vw - 2rem);
+  padding: $space-3 $space-4;
+  box-shadow: $shadow-md;
 
   &[hidden] {
     display: none;
+  }
+
+  // The loading and error states are spaced for a page, not a panel.
+  > * {
+    margin: 0;
   }
 }
 
@@ -39,4 +71,6 @@
   display: flex;
   gap: $space-2;
   align-items: center;
+  padding: $space-1 0;
+  cursor: pointer;
 }

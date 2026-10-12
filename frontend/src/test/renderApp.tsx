@@ -78,7 +78,8 @@ export function renderApp(
 
   const result = render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[route]}>
+      {/* As in main.tsx. */}
+      <MemoryRouter initialEntries={[route]} useTransitions={false}>
         <App />
         <RouterProbe report={report} />
       </MemoryRouter>

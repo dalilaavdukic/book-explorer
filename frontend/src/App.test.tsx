@@ -363,3 +363,19 @@ test("a failed logout keeps the reader logged in and says so", async () => {
   expect(screen.getByRole("button", { name: "Log out" })).toBeEnabled();
   expect(screen.queryByRole("link", { name: "Log in" })).toBeNull();
 });
+
+test("a failed logout's message can be dismissed, and focus moves to Log out", async () => {
+  serveBooks([nineteenEightyFour]);
+  recordPosts("/api/auth/logout/", () =>
+    HttpResponse.json({ detail: "Server error." }, { status: 500 }),
+  );
+  renderApp("/", { user: alice });
+
+  fireEvent.click(await screen.findByRole("button", { name: "Log out" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Dismiss" }));
+
+  await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+  expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Log out" })).toHaveFocus();
+  expect(screen.getByText("alice")).toBeInTheDocument();
+});
