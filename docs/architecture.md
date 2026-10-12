@@ -554,7 +554,7 @@ Rejected alternatives:
 - **Styling.** Each component has its own `Component.module.scss`. Shared variables and mixins are loaded with `@use` (Sass's older `@import` is deprecated).
 - **Accessibility through semantic HTML**, with no component library:
   - real `<label>` and `<button>` elements
-  - native `<select>` for the sort order
+  - the sort as a native `<select>` for the field and one button that flips the direction: it shows an up or down arrow and is named "Ascending" or "Descending", after the current order
   - the genre filter as a button that opens a group of native checkboxes
   - the author filter as a small combobox following the WAI-ARIA combobox pattern: a text input with a list of suggestions, usable with the arrow keys, Enter and Escape, with loading, no-match and error states (AC-S10)
   - the native `<dialog>` element for confirming a delete (AC-N5)

@@ -7,16 +7,14 @@ import { parsePositiveInteger } from "./parsePositiveInteger.ts";
 export const BOOKS_PAGE_SIZE = 12;
 
 export type BookSort = NonNullable<BookListParams["sort"]>;
+export type BookSortField = Exclude<BookSort, `-${string}`>;
 
-// A Record must name every generated sort value, so the options and the URL
+// A Record must name every generated sort field, so the options and the URL
 // check can't drift from the API.
-export const BOOK_SORT_LABELS: Record<BookSort, string> = {
-  title: "Title, A–Z",
-  "-title": "Title, Z–A",
-  author: "Author, A–Z",
-  "-author": "Author, Z–A",
-  year: "Year, oldest first",
-  "-year": "Year, newest first",
+export const BOOK_SORT_FIELDS: Record<BookSortField, string> = {
+  title: "Title",
+  author: "Author",
+  year: "Year",
 };
 
 /** The list's URL parameters, with the API's names and values. */
@@ -56,8 +54,26 @@ export interface BookListUrl {
 
 const FILTERS = ["search", "author", "genre", "has_notes"];
 
+function withoutDirection(value: string) {
+  return value.startsWith("-") ? value.slice(1) : value;
+}
+
 function isBookSort(value: string): value is BookSort {
-  return Object.hasOwn(BOOK_SORT_LABELS, value);
+  return Object.hasOwn(BOOK_SORT_FIELDS, withoutDirection(value));
+}
+
+/** The field and direction of a sort, which the toolbar sets separately. */
+export function splitSort(sort: BookSort) {
+  return {
+    // A sort is a field, with a leading "-" when it's descending.
+    field: withoutDirection(sort) as BookSortField,
+    descending: sort.startsWith("-"),
+  };
+}
+
+// Only compiles while the API has a descending sort for every field.
+export function joinSort(field: BookSortField, descending: boolean): BookSort {
+  return descending ? `-${field}` : field;
 }
 
 function parseOptionalInteger(value: string | null): number | null | "invalid" {

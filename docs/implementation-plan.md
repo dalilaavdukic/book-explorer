@@ -590,7 +590,7 @@ A phase is done when all of the following hold, in addition to the phase-specifi
 
 - **Design variables:** a palette (an ink-blue header `#1d3346`, a teal accent `#0b6e69`, an amber mark `#e9b44c`, a warm paper background `#f8f6f1`, and tints for badges and states), a type scale, shadows, corner radii and one control height. They live in `_variables.scss`, with shared mixins.
 - **Controls and buttons:** one style for every input, the select and the Genres button; default, primary, danger and text buttons; consistent hover, focus and disabled states.
-- **Filter toolbar:** the controls in one aligned panel that wraps on narrow screens, with the sort `<select>` restyled to match.
+- **Filter toolbar:** the controls in one aligned panel that wraps on narrow screens. The sort is a field `<select>` and a button that flips the direction (the sort decision below).
 - **Author and search fields:** the author's Clear button becomes an × inside the field. It stays a real button named "Clear author" and still returns focus to the input. The search box's native × is restyled to match; Firefox shows none.
 - **Genre filter:** styled as a dropdown with a chevron. The panel also closes on a click outside it, or when focus leaves the control.
 - **Header:** sticky, with a wordmark and the account controls. `scroll-padding-top` keeps a focused element clear of it. No footer.
@@ -599,7 +599,7 @@ A phase is done when all of the following hold, in addition to the phase-specifi
 - **States and login:** styled loading, empty, error and not-found views, and a styled login page. No skeleton loaders.
 - **Finishing touches:** a book favicon in place of Vite's, a checkbox accent colour, short transitions that respect reduced motion, and balanced wrapping for titles.
 
-**Sort decision.** The user judges the restyled sort `<select>` in the browser once the toolbar is built. If it's kept, nothing changes. Otherwise the phase plan is amended to a field select plus A–Z / Z–A radios, with their tests and an update to architecture §8.8.
+**Sort decision.** The user judged the restyled sort `<select>` in the browser once the toolbar was built, and didn't keep it (2026-10-12). The sort is a field `<select>` (Title, Author, Year) plus one button that flips the direction, shown as an up or down arrow and named "Ascending" or "Descending". The URL's `sort` values don't change. Both controls have tests, and architecture §8.8 describes them.
 
 **Tests**
 

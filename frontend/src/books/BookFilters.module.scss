@@ -10,7 +10,8 @@
   padding: $space-4;
   margin-bottom: $space-6;
 
-  > label:not(.checkbox) {
+  > label:not(.checkbox),
+  .sortField {
     display: flex;
     flex-direction: column;
     gap: $space-1;
@@ -27,9 +28,22 @@
   }
 }
 
+.sort {
+  display: flex;
+  gap: $space-2;
+  align-items: flex-end;
+}
+
+.direction {
+  width: $control-height;
+  padding: 0;
+  font-size: $text-lg;
+}
+
 // Sort shares a row with Genres when both fit, and otherwise wraps rather
-// than cut its label short. The checkbox shares the last row with Clear all.
+// than cut its field short. The checkbox shares the last row with Clear all.
 .sort,
+.sortField,
 .checkbox {
   @include narrow {
     flex: 1 1 auto;

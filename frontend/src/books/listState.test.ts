@@ -74,6 +74,8 @@ describe("reading the URL", () => {
     "sort=banana",
     "sort=Title",
     "sort=%20title",
+    "sort=--title",
+    "sort=-",
     "page=abc&sort=banana",
   ])("%s is an invalid filter", (search) => {
     expect(read(search)).toBe("invalid-filters");
