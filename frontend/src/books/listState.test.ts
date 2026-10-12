@@ -1,3 +1,4 @@
+import { skipToken } from "@tanstack/react-query";
 import { describe, expect, test } from "vitest";
 import type { User } from "../api/auth.ts";
 import { type BookListState, readBookListState } from "./listState.ts";
@@ -95,8 +96,8 @@ describe("the list's cache key", () => {
       "list",
       params,
     ]);
-    expect(bookListQuery(alice, params).enabled).toBe(true);
-    expect(bookListQuery(null, params).enabled).toBe(false);
+    expect(bookListQuery(alice, params).queryFn).toBeTypeOf("function");
+    expect(bookListQuery(null, params).queryFn).toBe(skipToken);
   });
 
   test("every other list is public, whoever asks", () => {
@@ -105,7 +106,7 @@ describe("the list's cache key", () => {
     for (const user of [alice, null]) {
       const query = bookListQuery(user, params);
       expect(query.queryKey).toEqual(["books", "list", params]);
-      expect(query.enabled).toBeUndefined();
+      expect(query.queryFn).toBeTypeOf("function");
     }
   });
 

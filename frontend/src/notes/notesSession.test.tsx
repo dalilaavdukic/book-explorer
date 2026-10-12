@@ -6,7 +6,7 @@ import type { Session, User } from "../api/auth.ts";
 import type { BookDetail } from "../api/books.ts";
 import { failNext, holdNext, makeNote, serveNotes } from "../test/notesApi.ts";
 import { renderApp } from "../test/renderApp.tsx";
-import { server } from "../test/server.ts";
+import { refuseOtherReaders, server } from "../test/server.ts";
 
 const NOTES_PATH = "/api/books/7/notes/";
 const EXPIRED =
@@ -197,6 +197,40 @@ test("a re-check that finds another reader discards the draft", async () => {
   await refetchOnFocus();
 
   expect(await screen.findByText("Bob's note.")).toBeInTheDocument();
+  expect(form("Add a note").getByLabelText("Note")).toHaveValue("");
+  expect(screen.queryByDisplayValue(/Alice/)).toBeNull();
+  expect(aliceTextOnScreen()).toEqual([]);
+});
+
+test("a request refused because another reader logged in elsewhere shows that reader instead", async () => {
+  const { api } = await openAsAlice();
+  api.notes.splice(0, api.notes.length, ...bobNotes);
+  serveSession(bob);
+  refuseOtherReaders(bob);
+
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+  expect(await screen.findByText("Bob's note.")).toBeInTheDocument();
+  expect(
+    within(screen.getByRole("banner")).getByText("bob"),
+  ).toBeInTheDocument();
+  expect(aliceTextOnScreen()).toEqual([]);
+  // Alice's page 2 was refused before reaching the notes.
+  expect(api.readers).toEqual(["GET 1", "GET 2"]);
+});
+
+test("a save refused because another reader logged in elsewhere isn't saved, and the draft is discarded", async () => {
+  const { api } = await openAsAlice();
+  typeInForm("Add a note", "Alice's private thought.", "3");
+  api.notes.splice(0, api.notes.length, ...bobNotes);
+  serveSession(bob);
+  refuseOtherReaders(bob);
+
+  fireEvent.click(form("Add a note").getByRole("button", { name: "Add note" }));
+
+  expect(await screen.findByText("Bob's note.")).toBeInTheDocument();
+  expect(api.posts).toEqual([]);
+  expect(api.notes).toEqual(bobNotes);
   expect(form("Add a note").getByLabelText("Note")).toHaveValue("");
   expect(screen.queryByDisplayValue(/Alice/)).toBeNull();
   expect(aliceTextOnScreen()).toEqual([]);

@@ -1,5 +1,5 @@
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
-import { changeSession } from "../auth/session.ts";
+import { changeSession, sessionKey } from "../auth/session.ts";
 import { reportUnexpectedError } from "../errorReporting.ts";
 import { ApiError, NetworkError } from "./client.ts";
 
@@ -23,6 +23,12 @@ export function createQueryClient() {
       // switches to its logged-out state.
       if (error.status === 401) {
         changeSession(client, null);
+      }
+      // A 412 means the session now belongs to another reader, who logged in
+      // elsewhere. The session check finds out who, and the session function
+      // does the rest.
+      if (error.status === 412) {
+        void client.refetchQueries({ queryKey: sessionKey });
       }
     } else if (!(error instanceof NetworkError)) {
       // Neither an answer from the API nor a lost connection: a bug in the
