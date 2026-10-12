@@ -1,8 +1,22 @@
+import io
+import logging
+from unittest import mock
+
+from django.db import DatabaseError
+from django.test import RequestFactory, SimpleTestCase, override_settings
+from django.utils.functional import SimpleLazyObject
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.test import APIRequestFactory, APITestCase
 from rest_framework.views import APIView
+
+from accounts.models import User
+from catalog.models import Book
+from catalog.views import GenreListView
+from notes.models import Note
+
+from .logging import RequestContextFilter
 
 
 class DefaultView(APIView):
@@ -67,3 +81,116 @@ class ApiDocsTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertContains(response, "/static/drf_spectacular_sidecar/")
         self.assertNotContains(response, "cdn.jsdelivr.net")
+
+
+def capture_console_output(test):
+    """Swaps the configured console handler's stream for a StringIO."""
+    handler = next(
+        h for h in logging.getLogger("django").handlers if h.name == "console"
+    )
+    output = io.StringIO()
+    test.addCleanup(handler.setStream, handler.setStream(output))
+    return output
+
+
+def failing(target, attribute):
+    return mock.patch.object(
+        target, attribute, side_effect=RuntimeError("probe failure")
+    )
+
+
+@override_settings(DEBUG=False)
+class ServerErrorLoggingTests(APITestCase):
+    def setUp(self):
+        self.output = capture_console_output(self)
+        self.client.raise_request_exception = False
+
+    def test_unexpected_error_is_logged_with_traceback_method_path_and_user(self):
+        reader = User.objects.create_user(username="reader")
+        self.client.force_login(reader)
+
+        with failing(GenreListView, "list"):
+            response = self.client.get("/api/genres/")
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        output = self.output.getvalue()
+        self.assertIn(
+            "ERROR django.request Internal Server Error: /api/genres/ "
+            f"[GET, user {reader.pk}]",
+            output,
+        )
+        self.assertIn("Traceback (most recent call last):", output)
+        self.assertIn("RuntimeError: probe failure", output)
+
+    def test_unexpected_error_for_a_visitor_is_logged_as_anonymous(self):
+        with failing(GenreListView, "list"):
+            self.client.get("/api/genres/")
+
+        self.assertIn(
+            "Internal Server Error: /api/genres/ [GET, anonymous]",
+            self.output.getvalue(),
+        )
+
+    def test_client_errors_are_not_logged(self):
+        for path in ("/api/books/0/", "/api/books/?sort=banana"):
+            with self.subTest(path=path):
+                self.client.get(path)
+
+        self.assertEqual(self.output.getvalue(), "")
+
+    def test_passwords_never_reach_the_log(self):
+        password = "a-password-that-must-not-be-logged"
+        credentials = {"username": "nobody", "password": password}
+
+        self.client.post("/api/auth/login/", credentials, format="json")
+        with mock.patch(
+            "accounts.serializers.authenticate", side_effect=RuntimeError("down")
+        ):
+            response = self.client.post("/api/auth/login/", credentials, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertIn("Internal Server Error: /api/auth/login/", self.output.getvalue())
+        self.assertNotIn(password, self.output.getvalue())
+
+    def test_note_text_never_reaches_the_log(self):
+        text = "note text that must not be logged"
+        self.client.force_login(User.objects.create_user(username="reader"))
+        book = Book.objects.first()
+
+        with failing(Note, "save"):
+            response = self.client.post(
+                f"/api/books/{book.pk}/notes/", {"body": text}, format="json"
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertIn("Internal Server Error", self.output.getvalue())
+        self.assertNotIn(text, self.output.getvalue())
+
+
+class RequestContextFilterTests(SimpleTestCase):
+    def context(self, **extra):
+        record = logging.LogRecord("django", logging.ERROR, "", 0, "msg", None, None)
+        record.__dict__.update(extra)
+
+        self.assertTrue(RequestContextFilter().filter(record))
+        return record.request_context
+
+    def test_record_without_a_request_gets_no_context(self):
+        self.assertEqual(self.context(), "")
+
+    def test_runserver_record_carrying_a_socket_gets_no_context(self):
+        self.assertEqual(self.context(request=object()), "")
+
+    def test_request_without_a_user_says_so(self):
+        request = RequestFactory().get("/api/books/")
+
+        self.assertEqual(self.context(request=request), " [GET, user unknown]")
+
+    def test_user_that_cannot_be_loaded_does_not_raise(self):
+        def unavailable():
+            raise DatabaseError("database is down")
+
+        request = RequestFactory().post("/api/auth/login/")
+        request.user = SimpleLazyObject(unavailable)
+
+        self.assertEqual(self.context(request=request), " [POST, user unknown]")

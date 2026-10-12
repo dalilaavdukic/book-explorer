@@ -1,6 +1,6 @@
 # Book Explorer: Architecture
 
-*Living document, last updated 2026-10-12 (Phase 7, frontend file rule). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
+*Living document, last updated 2026-10-12 (Phase 7, logging). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
 
 ## 1. Purpose and status
 
@@ -61,7 +61,7 @@ Two decisions deliberately depart from the assignment's wording or from common d
 ```
 backend/
 ├── manage.py, requirements.txt, requirements-dev.txt, ruff.toml
-├── config/     settings.py, urls.py, wsgi.py, asgi.py
+├── config/     settings.py, urls.py, logging.py, pagination.py, wsgi.py, asgi.py
 ├── accounts/   User model, auth endpoints, session authentication class,
 │               demo-user command, admin registration
 ├── catalog/    Author/Genre/Book models, schema and seed migrations,
@@ -70,6 +70,10 @@ backend/
 ```
 
 - **Settings.** There is a single `settings.py`. `SECRET_KEY` and `DEBUG` come from environment variables, with local-development defaults; the README warns that those defaults are for development only.
+- **Logging.** `LOGGING` writes to the console (stderr) whether `DEBUG` is on or off. Django's default writes there only with `DEBUG` on, and otherwise emails `ADMINS`, which is empty, so an unexpected error would leave no trace.
+  - Each record names its logger and level. One about a request also gets its method and user (`[GET, user 3]`, `[GET, anonymous]`) from a filter in `config/logging.py`. Django already adds the path and, for a 500, the traceback.
+  - `django.request` logs at `ERROR`: crashes are logged, and the `WARNING` Django writes for every 4xx isn't. runserver's own request lines already show every status in development, and the test suite would otherwise print one line per expected 400, 401 and 404.
+  - Request bodies, query strings in error records, and cookies are never logged, so passwords, note text, session ids and CSRF tokens stay out of the log.
 - **DRF defaults.**
   - Authentication uses the custom session class (§6.5).
   - The default permission is `IsAuthenticated`, and catalog views explicitly allow public access (§6.6).
@@ -796,3 +800,6 @@ There are no automated browser end-to-end tests: they would need both servers an
   - `joinSort` builds `-${field}`, which compiles only while the API has a descending sort for every field.
   - Trade-off: the button's name changes with each click, between "Ascending" and "Descending". Some screen readers don't announce a focused button's new name, so a screen-reader user may hear the new order only when the button is read again.
 - **Favicon:** `public/book-explorer.svg`, under a new name rather than Vite's `favicon.svg`. Browsers keep a favicon per site and don't reliably refetch one whose URL hasn't changed, so anyone who had run another Vite app on `localhost:5173` would keep seeing Vite's icon.
+
+**Settled during final integration (Phase 7):**
+- **Logging** (§4). The request filter sits on the console handler, not on a logger, because a logger's filters only see records created on that logger, not those that propagate to it from `django.request`. `django.server` is declared again as Django's default declares it, so runserver's request lines keep their own format. The filter never raises: a filter's exception isn't caught by the logging module, and loading the user fails when the database does.
