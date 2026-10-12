@@ -1,7 +1,9 @@
 import io
+import json
 import logging
 from unittest import mock
 
+from django.conf import settings
 from django.contrib.auth.views import LoginView
 from django.db import DatabaseError
 from django.test import RequestFactory, SimpleTestCase, override_settings
@@ -257,6 +259,22 @@ class ApiErrorHandlerTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("text/html", response["Content-Type"])
+
+    def test_json_body_over_the_size_limit_gets_a_json_400(self):
+        # DRF applies Django's size limit only to its own JSON and form
+        # parsers, so this holds while config.parsers.JSONParser subclasses DRF's.
+        self.client.force_login(User.objects.create_user(username="reader"))
+        book = Book.objects.first()
+        body = json.dumps({"body": "x" * settings.DATA_UPLOAD_MAX_MEMORY_SIZE})
+
+        response = self.client.post(
+            f"/api/books/{book.pk}/notes/", body, content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), {"detail": "Bad request."})
+        self.assertIn("ERROR django.security.RequestDataTooBig", self.output.getvalue())
+        self.assertFalse(Note.objects.exists())
 
 
 DEEPLY_NESTED = "[" * 100_000
