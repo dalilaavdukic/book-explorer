@@ -20,6 +20,10 @@ html {
   scroll-padding-top: calc(#{$header-height} + #{$space-8});
 }
 
+:root {
+  accent-color: $color-accent;
+}
+
 body {
   margin: 0;
   font-family: $font-family;
@@ -35,6 +39,7 @@ h3 {
   font-weight: 700;
   line-height: $leading-tight;
   color: $color-ink;
+  text-wrap: balance;
 }
 
 h1 {
