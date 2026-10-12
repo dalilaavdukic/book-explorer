@@ -1,23 +1,76 @@
 # Book Explorer
 
-A Django REST Framework backend and a React (TypeScript) frontend for browsing a book catalog, with private notes for each reader. It's a take-home assignment, built in phases. This README grows with each phase. The design is documented in [`docs/`](docs/).
+A Django REST Framework backend and a React (TypeScript) frontend for browsing a book catalog, with private notes for each reader. It's a take-home assignment, built in phases. The design is documented in [`docs/`](docs/).
+
+## Contents
+
+- [Overview](#overview)
+- [Requirements](#requirements)
+- [Backend setup](#backend-setup)
+- [Frontend setup](#frontend-setup)
+- [Running the app](#running-the-app)
+- [Users](#users)
+- [Seed data](#seed-data)
+- [Notes](#notes)
+- [Search, filters and sorting](#search-filters-and-sorting)
+- [Visual design](#visual-design)
+- [Design choices and challenges](#design-choices-and-challenges)
+- [Assumptions and decisions](#assumptions-and-decisions)
+- [Known limitations](#known-limitations)
+- [Tests and checks](#tests-and-checks)
+- [How acceptance was verified](#how-acceptance-was-verified)
+- [API contract](#api-contract)
+- [Repository layout](#repository-layout)
+- [Documentation](#documentation)
+- [Development workflow](#development-workflow)
+- [License](#license)
+
+## Overview
+
+- **Visitors** browse a catalog of 100 books. They can search by title or author, filter by author and by one or more genres, sort by title, author or year, and page through the results. A book's page shows its details, and the author's name links to the list of that author's books.
+- **Readers**, once logged in, can also keep private notes on each book, each with an optional page number, and narrow the catalog to the books they've written notes on. Readers never see each other's notes.
+- **The stack:** Django 5.2 and Django REST Framework with SQLite for the backend; React 19 with TypeScript, Vite, React Router and TanStack Query for the frontend.
 
 ## Requirements
 
-- **Python 3.12.** On Ubuntu or Debian, also install `python3.12-venv` (`sudo apt install python3.12-venv`). Without it, `python3.12 -m venv` fails.
-- **Node.js 24 LTS.** The version is in `frontend/.nvmrc`; with nvm, run `nvm use` in `frontend/`.
+- **Python 3.12:**
+  - **Linux:** on Ubuntu or Debian, also install `python3.12-venv` (`sudo apt install python3.12-venv`). Without it, `python3.12 -m venv` fails.
+  - **macOS:** install it from python.org or with Homebrew (`brew install python@3.12`). Both provide the `python3.12` command used below. The `python3` that comes with Apple's command-line tools is an older version.
+  - **Windows:** install it from python.org. The installer includes the `py` launcher used below.
+- **Node.js 24 LTS.** The version is in `frontend/.nvmrc`.
+  - With nvm on Linux or macOS, run `nvm use` in `frontend/`.
+  - On Windows, install Node 24 LTS from nodejs.org, or use nvm-windows. nvm-windows doesn't read `.nvmrc`, so run `nvm install 24`, then `nvm use` with the full version that `nvm list` shows.
 
 ## Backend setup
 
+On Linux and macOS:
+
 ```bash
 cd backend
-python3.12 -m venv .venv         # Windows: py -3.12 -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
+python3.12 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements-dev.txt
 python manage.py migrate
 python manage.py create_demo_users
 python manage.py runserver
 ```
+
+On Windows, in PowerShell:
+
+```powershell
+cd backend
+py -3.12 -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements-dev.txt
+python manage.py migrate
+python manage.py create_demo_users
+python manage.py runserver
+```
+
+- If PowerShell refuses to run `Activate.ps1` because running scripts is disabled, allow it for your user once: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`.
+- In Command Prompt, activate with `.venv\Scripts\activate.bat` instead.
+
+Every later `python` and `pip` command in this README needs the virtual environment active. Activate it again in each new terminal.
 
 `create_demo_users` creates the two demo readers described in [Users](#users).
 
@@ -32,9 +85,17 @@ python manage.py runserver
 | `DJANGO_SECRET_KEY` | An insecure development key | Django's secret key |
 | `DJANGO_DEBUG` | `true` | Set to `false` to turn debug mode off |
 
+To run with debug mode off, in `backend/`:
+- **Linux and macOS:** `DJANGO_DEBUG=false python manage.py runserver --insecure`
+- **Windows PowerShell:** `$env:DJANGO_DEBUG = "false"`, then `python manage.py runserver --insecure`. The variable stays set until that window is closed.
+
+With debug mode off, `runserver` doesn't serve static files, so Django admin and Swagger UI would load without their styles and scripts. `--insecure` makes it serve them, for local use only.
+
 > **Development only.** These defaults are for running locally. Never deploy with them.
 
 ## Frontend setup
+
+The same on every system:
 
 ```bash
 cd frontend
@@ -165,7 +226,7 @@ Above the book list are a search box, an author selector, a genre filter, the so
 - Changing the search, a filter or the sort goes back to page 1.
 - "Clear all" removes the search and every filter, and keeps the sort.
 
-**Author suggestions.** Typing in the author selector suggests up to 10 authors whose name contains the text, by surname, after the same pause. The arrow keys, Enter and Escape work as in any combobox. Only the chosen author's id goes into the URL, and a link with `author=<id>` shows that author's name.
+**Author suggestions.** Typing in the author selector suggests up to 10 authors whose name contains the text, by surname, after the same pause. The arrow keys, Enter and Escape work as in any combobox. Only the chosen author's id goes into the URL, and a link with `author=<id>` shows that author's name. The author's name on a book's page is such a link.
 
 **Books with my notes** is a personal list, so it needs a login:
 - Visitors don't see the control. A visitor who opens a link with `has_notes=true` gets the public catalog, and the parameter is removed from the URL.
@@ -222,14 +283,101 @@ Above the book list are a search box, an author selector, a genre filter, the so
 
 **Checked** in Chrome at 1280 px and 390 px wide, logged out and as a reader, with the keyboard and with reduced motion. There's no horizontal scroll at phone width.
 
+## Design choices and challenges
+
+Notes are the main feature, and search, filters and sorting the second. Each choice below is explained in full in [`docs/architecture.md`](docs/architecture.md), in the section given.
+
+**Notes are owned through filtering, so another reader's note is a 404** (§6.6). Every notes query starts from `Note.objects.filter(user=request.user)`. Another reader's note is never found, so reading, editing or deleting it gets the same 404 as a note that doesn't exist. A permission check after fetching was rejected: its 403 would confirm that the note exists, and it wouldn't cover lists.
+
+**Pagination comes after owner filtering** (§6.6). The notes list pages the reader's own notes, so its count, its page boundaries and its "Invalid page." answer depend only on them. They reveal nothing about anyone else's notes.
+
+**401 for "not logged in", not 403** (§6.5). DRF's session authentication answers 403 when nobody is logged in, because cookie sessions have no standard `WWW-Authenticate` value. A failed CSRF check is also 403, so the frontend couldn't tell an expired session from a refused request. A small subclass, `accounts.authentication.SessionAuthentication`, names a `Session` scheme, so DRF answers 401. The frontend then has one rule: any 401 means the reader is logged out.
+
+**Session authentication and CSRF, through one origin** (§6.1–§6.3).
+- Readers log in with Django's sessions. The session cookie is HttpOnly, so no script can read it, and logging out deletes the session on the server. Tokens and JWTs were rejected: a token is stored where script can read it, and a JWT stays valid after logout unless the server keeps a blocklist.
+- In development, Vite forwards `/api` and `/admin` to Django, so the browser talks to one origin. Cookies and Django's CSRF check work as Django intends, with no CORS setup.
+- The API client copies the CSRF cookie into an `X-CSRFToken` header on every write. Login and logout check it too, so another site can't log a reader into an account the site controls.
+
+**Private data at authentication boundaries** (§8.5). On a shared browser, the next reader must never see the previous reader's notes, "Books with my notes" results or unsaved draft, even for a moment.
+- Every private cache entry sits under a `private` root and the reader's id. One call finds them all, and another reader's query can never be answered from them.
+- One function changes the session: on a login, a logout, any 401, and a re-check when the tab regains focus. Whenever the reader changes, it cancels private requests in flight and removes every private entry. Public catalog data stays cached.
+- A draft's fate depends on how the session ended. After an expiry or a logout in another tab, the open form keeps its text, so a note isn't lost. A logout in this tab, or any login, discards it.
+
+**Strict validation: a 400, never a silent fallback** (§7.5). An invalid value is refused with a message, never ignored or replaced with a default: `sort=banana`, a genre that doesn't exist, a page of `1.5`, a note body sent as a number. A fallback would quietly show something other than what the link asked for. Unknown parameter names are ignored, so tracking parameters don't break a link.
+
+**Data that can't be recreated is protected** (§5).
+- A book with notes can't be deleted, even in Django admin, because notes are the one thing that can't be recreated. Deleting a reader deletes their notes.
+- A note is marked edited only when its text or page really changes.
+- Database constraints also enforce a note's page range and non-empty text, behind the API's own checks.
+
+**A curated, checked and reversible seed** (§5). 100 real books, with sort keys set by hand and every title, author and year checked against Wikipedia ([Seed data](#seed-data)). A test rolls the migration back and applies it again.
+
+**The URL is the only copy of the list state** (§8.7). Search, filters, sort and page live only in the URL, which is also the list's cache key. Refresh, Back and Forward, and a shared link all restore both the controls and the results, and no second copy can drift out of step.
+
+**Generated types** (§7.7). The OpenAPI schema is generated from the backend's code, and the frontend's TypeScript types from the schema. CI fails if either is out of date, so an API change that breaks the frontend fails the build instead of the app.
+
+**Challenges met along the way:**
+- **SQLite and huge numbers.** A 20-digit id overflows SQLite's integers. Django guards most lookups, but not `in`, so `genre=99999999999999999999` was a 500. Genre ids are now checked to be 1 to 18 digits first. In the same way, Python refuses to convert a string of more than 4,300 digits, so `page_size` counts the digits before converting.
+- **An edit that brought a deleted note back.** Django's `save()` falls back to an INSERT when its UPDATE matches no row. A PATCH that loaded a note just before a DELETE committed therefore re-created it. A note now refuses to be saved once its row is gone, and the API answers with the missing-note 404.
+- **Deeply nested JSON.** Python's JSON decoder raises `RecursionError` on about 100 KB of `[`, which DRF doesn't catch, so it was a 500 on every write. A small parser subclass turns it into a 400.
+- **A one-frame flash.** React Router renders a location change as a React transition, so a control that reads the URL showed its old value for one frame after a click. jsdom can't show this, so it was measured in the browser frame by frame, and transitions are now off.
+- **Sessions across tabs.** Another reader logging in elsewhere causes no 401 in this tab, so the tab re-checks the session whenever it regains focus. An expiry and a logout elsewhere look the same from here, so both keep the draft; only a logout in this tab is known to be deliberate.
+
+## Assumptions and decisions
+
+The full lists are in [`docs/spec.md`](docs/spec.md): §2 for the product decisions and §7 for the assumptions. The technical decisions are in [`docs/architecture.md`](docs/architecture.md) §3.
+
+**Product decisions:**
+- All three suggested features are built. Notes are the main feature; search, filters and sorting the second.
+- The catalog is public. Logging in is needed only for notes and "Books with my notes".
+- Search is free text over title and author, and filters are exact: author, genres and "Books with my notes". So there's no separate title filter.
+- A reader can keep many notes per book, each with an optional page, shown 20 per page.
+- There's no registration. Demo readers come from a command, and administrators from `createsuperuser`.
+- Several genres can be chosen at once, and a book in any of them matches. The author is chosen with a type-to-search selector.
+- Sorting by author uses a surname-first key stored with each author.
+- The seed has 100 books, listed 12 per page.
+
+**Assumptions:**
+- After logging in, the reader returns to the page they came from.
+- Each book has one author and one genre, and books are edited only in Django admin.
+- Another reader's note looks "not found" rather than "forbidden", so its existence isn't revealed.
+- A note can't be moved to another book.
+- Limits: a note's text up to 5,000 characters, a page from 1 to 10,000, and a pause of about 300 ms before searching.
+- Every view that loads data has loading, empty and error states.
+- Backend tests are required, although the assignment marks them optional.
+
+**Technical decisions:**
+- **TypeScript instead of JavaScript.** The assignment asks for "JavaScript ES6+". TypeScript is JavaScript with types, and it compiles to modern JavaScript (ES2023 here). With types generated from the API schema, a mismatch between the frontend and the backend fails the build instead of failing in the browser. Strict mode is on.
+- **401 for logged-out requests,** as explained above.
+- **SQLite,** so a reviewer installs no database server. The code uses no database-specific features, so moving to PostgreSQL is a settings change.
+- **pip with fully pinned requirements, and npm with its lockfile,** so every install gets the same versions.
+- **No Docker.** The assignment describes a native setup, and SQLite has no service to run.
+- **One of the two optional enhancements was built:** the author's name on a book's page opens the list of their books. Note counts for each book on the list weren't built.
+
+## Known limitations
+
+- **The last save wins.** If one note is edited in two places at once, the later save overwrites the earlier one.
+- **Drafts don't survive logging in again.** After a session expires, the text stays in the form, but logging in discards it ([Notes](#notes)).
+- **Rolling back the seed deletes every note** ([Seed data](#seed-data)).
+- **Search doesn't ignore accents, and ignores case only for ASCII letters** with SQLite ([Search, filters and sorting](#search-filters-and-sorting)).
+- **Sorting doesn't skip leading articles,** so *The Hobbit* sorts under T.
+- **Login attempts aren't rate-limited.**
+- **A tab notices a login or logout in another tab only later:** on its next request that needs a login, or when it regains focus. The server always answers for the browser's current session, so a tab that hasn't noticed yet still can't reach data it shouldn't.
+- **Staff can read every note in Django admin.** Notes are private from other readers, not from administrators.
+- **A session lasts two weeks from login,** without renewal.
+- **Note counts on the list weren't built** (the optional enhancement AC-X1).
+- **Not ready for production.** Deployment is out of scope. It would need HTTPS with `Secure` cookies and HSTS, debug mode off with a real `SECRET_KEY` and `ALLOWED_HOSTS`, and a reverse proxy serving the frontend build and the collected static files. It would also need rate limiting, a Content-Security-Policy, periodic `clearsessions`, and `django.security` logging tuned for scanner traffic. Architecture §10 lists these.
+
 ## Tests and checks
 
 Backend, in `backend/` with the virtual environment active:
 
 ```bash
 python manage.py test                              # tests
-coverage run manage.py test && coverage report     # tests with coverage
-ruff check . && ruff format --check .              # lint and formatting
+coverage run manage.py test                        # tests, measuring coverage
+coverage report                                    # the coverage report
+ruff check .                                       # lint
+ruff format --check .                              # formatting
 python manage.py makemigrations --check --dry-run  # no missing migrations
 ```
 
@@ -242,18 +390,37 @@ npm run format:check  # Prettier
 npm run build         # type check and production build
 ```
 
-GitHub Actions runs all of these on every pull request and on every push to `main`.
+The commands are the same on every system. GitHub Actions runs all of these on every pull request and on every push to `main`.
+
+**Coverage.**
+- **Backend:** 99% of the application code, lines and branches, measured with coverage.py. The one line not covered is in the notes admin. `backend/.coveragerc` leaves out the tests, the migrations and the server entry points, so the figure measures the application code only.
+- **Frontend:** not measured for coverage. Its tests target the behaviour that matters most: the API client, the 401 rule, private data and drafts when the session changes, failed note changes, and the list's URL state.
+
+## How acceptance was verified
+
+Every acceptance criterion in [`docs/spec.md`](docs/spec.md), every user journey and every handled edge case was verified before submission, each by the method that suits it:
+- **Backend tests:** authorization, validation, database integrity, migrations and API behaviour.
+- **Frontend tests:** the API client, the 401 rule, private data and drafts when the session changes, failed note changes, and URL state.
+- **Contract checks:** regenerating the schema and the types leaves no diff.
+- **Browser checks:** Claude Code drove Chrome through Playwright MCP against the running app, including two tabs, delayed and failing requests, and an expired session.
+- **Manual checks:** what automation can't do reliably, such as a tab noticing another tab's login or logout when it regains focus, and the look and feel.
+
+The result for each criterion, with its method and evidence, is in [`docs/acceptance-checklist.md`](docs/acceptance-checklist.md). No browser test code is committed: the browser checks were one-off observations, and the automated tests are the regression safety net.
 
 ## API contract
 
-The API schema is committed as `backend/openapi.yaml`. The frontend's TypeScript types are generated from it into `frontend/src/api/schema.d.ts`, and they're committed too. After any API change, regenerate both and commit them with the change:
+The API schema is committed as `backend/openapi.yaml`. The frontend's TypeScript types are generated from it into `frontend/src/api/schema.d.ts`, and they're committed too. After any API change, regenerate both and commit them with the change. From the repository root, with the virtual environment active:
 
 ```bash
-cd backend && python manage.py spectacular --file openapi.yaml --validate --fail-on-warn
-cd ../frontend && npm run generate:types
+cd backend
+python manage.py spectacular --file openapi.yaml --validate --fail-on-warn
+cd ../frontend
+npm run generate:types
 ```
 
 CI regenerates both files and fails if either differs from the committed version.
+
+**URLs and errors.** Every API URL ends in a slash, `/api/docs/` and `/api/schema/` included. Without the slash, the API answers a JSON 404 rather than redirecting. Every error under `/api/` is JSON in DRF's shape, including unknown paths and, with debug mode off, server errors.
 
 **Swagger UI** at `/api/docs/` uses the browser's session, so log in through the app first to try endpoints that need a login. If you log in through Swagger UI itself instead, reload the page before sending another POST, PATCH or DELETE: logging in issues a new CSRF token, and the page keeps sending the one it loaded with.
 
@@ -263,7 +430,7 @@ CI regenerates both files and fails if either differs from the committed version
 |---|---|
 | `backend/` | Django project (`config/`) and apps |
 | `frontend/` | React app built with Vite |
-| `docs/` | Product specification, architecture and implementation plan |
+| `docs/` | Product specification, architecture, implementation plan and acceptance checklist |
 | `.claude/` | Claude Code agents and skills for the development workflow |
 
 ## Documentation
@@ -271,6 +438,7 @@ CI regenerates both files and fails if either differs from the committed version
 - [`docs/spec.md`](docs/spec.md): product decisions, user journeys and acceptance criteria
 - [`docs/architecture.md`](docs/architecture.md): technical decisions and their rationale
 - [`docs/implementation-plan.md`](docs/implementation-plan.md): phases and how each is verified
+- [`docs/acceptance-checklist.md`](docs/acceptance-checklist.md): the result of each acceptance criterion, with how it was verified
 
 The docs cite the employer's brief, `Development_Take-Home_Assignment.md`, which isn't included in this repository.
 
@@ -289,3 +457,7 @@ The app is built with Claude Code, one phase at a time, following the loop in [`
 - **Reviews are independent.** The three agents in `.claude/agents/` (two reviewers and the solution assessor) start without the conversation that produced the work. They judge it against the documents, the code, and professional practice beyond them, such as error handling, logging and accessibility basics that no document asks for. They can read files but not change them. They report numbered findings, keep correctness problems apart from preferences, and say whether the work is ready. The developer decides which findings to apply.
 - **Approval gates implementation.** `/implement-phase` runs only once the plan is marked approved, and each phase is approved before the next one starts.
 - **Plans are working files.** Phase plans stay local in `.claude/plans/` and aren't committed. Each phase's decisions are recorded in `docs/` when the phase closes.
+
+## License
+
+This is a take-home assignment, shared for review. All rights reserved: there's no license file, and no permission to reuse the code is granted.
