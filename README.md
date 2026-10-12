@@ -17,6 +17,7 @@ A Django REST Framework backend and a React (TypeScript) frontend for browsing a
 - [Design choices and challenges](#design-choices-and-challenges)
 - [Assumptions and decisions](#assumptions-and-decisions)
 - [Known limitations](#known-limitations)
+- [Future improvements](#future-improvements)
 - [Tests and checks](#tests-and-checks)
 - [How acceptance was verified](#how-acceptance-was-verified)
 - [API contract](#api-contract)
@@ -367,6 +368,35 @@ The full lists are in [`docs/spec.md`](docs/spec.md): §2 for the product decisi
 - **A session lasts two weeks from login,** without renewal.
 - **Note counts on the list weren't built** (the optional enhancement AC-X1).
 - **Not ready for production.** Deployment is out of scope. It would need HTTPS with `Secure` cookies and HSTS, debug mode off with a real `SECRET_KEY` and `ALLOWED_HOSTS`, and a reverse proxy serving the frontend build and the collected static files. It would also need rate limiting, a Content-Security-Policy, periodic `clearsessions`, and `django.security` logging tuned for scanner traffic. Architecture §10 lists these.
+
+## Future improvements
+
+[Known limitations](#known-limitations) says what the app doesn't do today. This section says what would come next with more time, and what a real project would do differently. Each group is in rough order of priority.
+
+**Before a real deployment:**
+- **The production setup** listed under "Not ready for production" above, with the frontend's build served from the same origin as the API, as the dev proxy does now, so sessions and CSRF work unchanged.
+- **Rate limiting,** on login first and then on writes, with DRF's throttling backed by a shared cache such as Redis, so every server process counts the same attempts.
+- **PostgreSQL instead of SQLite,** for concurrent writes. Its Unicode-aware case folding and collations would fix the search and sort issues with accented letters, and its `unaccent` extension would make search ignore accents. The code uses nothing specific to SQLite, so the move itself is a settings change.
+- **Error monitoring.** Unexpected errors are logged to the console today, and `reportUnexpectedError` is the one place the frontend reports them. Both would send to an error-tracking service such as Sentry, with a request id that links a browser report to its server log line.
+- **Safe data changes:** backups with a tested restore, and migrations reviewed for what they do to existing data. With real data, a rollback that deletes every note ([Seed data](#seed-data)) wouldn't be acceptable.
+- **Containers and continuous deployment:** an image built and deployed by CI once its checks pass. Docker was left out here because the assignment describes a native setup.
+- **Automated dependency updates** (Dependabot or Renovate), and `pip-audit` and `npm audit` in CI.
+
+**Product:**
+- **Note counts on the list** (AC-X1), designed but not built. A reader's list would carry each book's count from the same query, never one query per book, so the list would be cached under the reader's private key.
+- **Drafts that survive logging in again.** A draft would be saved in `sessionStorage` under the reader's id and removed by the same clean-up as their cached notes, so a long note isn't lost when the session expires.
+- **Conflict detection for notes.** An edit would send the version it started from, and a note changed since would get a 409 that offers to reload or overwrite, instead of the last save winning.
+- **Accounts:** registration, password reset by email, and sessions that extend while the reader is active.
+- **A "My notes" page** across all books, with search within notes.
+- **Better search and sort:** relevance ranking with PostgreSQL's full-text search, and a sort key for each title that skips leading articles, like the authors' surname-first key.
+- **Richer book data:** several authors or genres per book, ISBNs and covers, imported from a source such as Open Library, with a staff screen for managing books once that's a real workflow.
+- **Instant updates across tabs** with `BroadcastChannel`, so a login or logout in one tab reaches the others at once.
+
+**Engineering:**
+- **An automated end-to-end suite** (Playwright) covering the main journeys in CI, in Chromium, Firefox and WebKit. The browser checks for this submission were one-off observations in Chrome.
+- **Frontend coverage,** measured and reported in CI like the backend's.
+- **Automated accessibility checks** (axe) in the component tests, and testing with screen readers.
+- **HTTP caching** for the public catalog, and trigram indexes for search once the catalog is large.
 
 ## Tests and checks
 
