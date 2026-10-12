@@ -119,7 +119,7 @@ Evidence names test files and test names. Backend tests are under `backend/<app>
 | ID | Criterion | Method | Evidence | Result |
 |---|---|---|---|---|
 | AC-X1 | Per-reader note counts on the list | — | Not built (decided 2026-10-12). | Not built |
-| AC-X2 | The author on a book's page opens the list filtered by that author | Browser | Built after the core was verified and tagged. | Not built at this commit |
+| AC-X2 | The author on a book's page opens the list filtered by that author | Browser, FE | Built and verified after the core was tagged (`v1.0-core`). **FE:** `App.test.tsx` "the author on a book's page opens the list of their books" (the URL and the list request carry `author=1`, and the author field shows the name); "a book opened directly shows every attribute…" checks the link's `href`. **Browser:** on *Animal Farm*, "George Orwell" links to `/?author=135`; following it lists his four books with his name in the author field, and Back returns to the book. The first Tab from the title reaches the link, which shows its focus ring. | Pass |
 
 ## User journeys
 

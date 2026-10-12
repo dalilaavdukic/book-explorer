@@ -47,7 +47,12 @@ function BookDetail({ id }: { id: number }) {
           <h1 tabIndex={-1} className={styles.title}>
             {book.title}
           </h1>
-          <p className={styles.author}>by {book.author.name}</p>
+          <p className={styles.author}>
+            by{" "}
+            <Link to={{ pathname: "/", search: `?author=${book.author.id}` }}>
+              {book.author.name}
+            </Link>
+          </p>
           <dl className={styles.facts}>
             <div>
               <dt>Published</dt>

@@ -10,7 +10,7 @@ import { delay, http, HttpResponse } from "msw";
 import { expect, onTestFinished, test, vi } from "vitest";
 import type { Session, User } from "./api/auth.ts";
 import type { Book, BookDetail } from "./api/books.ts";
-import { serveBook, serveBooks } from "./test/catalogApi.ts";
+import { serveAuthors, serveBook, serveBooks } from "./test/catalogApi.ts";
 import { serveNotes } from "./test/notesApi.ts";
 import { renderApp } from "./test/renderApp.tsx";
 import { server } from "./test/server.ts";
@@ -207,8 +207,10 @@ test("a book opened directly shows every attribute and links to the first page",
       name: "Nineteen Eighty-Four",
     }),
   ).toBeInTheDocument();
+  const author = within(article).getByRole("link", { name: "George Orwell" });
+  expect(author).toHaveAttribute("href", "/?author=1");
+  expect(author.closest("p")).toHaveTextContent(/^by George Orwell$/);
   for (const text of [
-    "by George Orwell",
     "1949",
     "Dystopian",
     nineteenEightyFourDetail.description,
@@ -218,6 +220,27 @@ test("a book opened directly shows every attribute and links to the first page",
   expect(screen.getByRole("link", { name: "Back to books" })).toHaveAttribute(
     "href",
     "/",
+  );
+});
+
+test("the author on a book's page opens the list of their books", async () => {
+  serveBook(nineteenEightyFourDetail);
+  const listRequests = serveBooks([nineteenEightyFour]);
+  serveAuthors([nineteenEightyFour.author]);
+  const { location } = renderApp("/books/7");
+
+  fireEvent.click(await screen.findByRole("link", { name: "George Orwell" }));
+
+  expect(
+    await screen.findByRole("link", { name: "Nineteen Eighty-Four" }),
+  ).toBeInTheDocument();
+  expect(location().pathname).toBe("/");
+  expect(location().search).toBe("?author=1");
+  expect(listRequests.map((params) => params.get("author"))).toEqual(["1"]);
+  await waitFor(() =>
+    expect(screen.getByRole("combobox", { name: "Author" })).toHaveValue(
+      "George Orwell",
+    ),
   );
 });
 
