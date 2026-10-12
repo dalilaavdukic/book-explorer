@@ -48,11 +48,17 @@ export default function NoteItem({
         )}
       </p>
       <div className={styles.actions}>
-        <button type="button" onClick={onEdit} disabled={!canEdit || deleting}>
+        <button
+          type="button"
+          className={styles.edit}
+          onClick={onEdit}
+          disabled={!canEdit || deleting}
+        >
           Edit
         </button>
         <button
           type="button"
+          className={styles.delete}
           onClick={() => dialog.current?.showModal()}
           disabled={!canDelete || deleting}
         >
@@ -75,6 +81,7 @@ export default function NoteItem({
           </button>
           <button
             type="button"
+            className={styles.confirmDelete}
             onClick={() => {
               dialog.current?.close();
               onDelete();

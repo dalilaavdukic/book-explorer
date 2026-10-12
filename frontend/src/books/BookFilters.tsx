@@ -71,7 +71,7 @@ export default function BookFilters({
         </label>
       )}
       {filtered && (
-        <button type="button" onClick={onClearAll}>
+        <button type="button" className={styles.clearAll} onClick={onClearAll}>
           Clear all
         </button>
       )}

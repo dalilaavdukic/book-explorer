@@ -133,7 +133,7 @@ export default function NoteForm({
         </p>
       )}
       <div className={styles.actions}>
-        <button type="submit" disabled={!canSave}>
+        <button type="submit" className={styles.submit} disabled={!canSave}>
           {submitLabel}
         </button>
         {onCancel && (

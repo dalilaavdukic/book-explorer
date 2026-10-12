@@ -4,18 +4,69 @@ $font-family:
   "Segoe UI",
   Roboto,
   sans-serif;
+$font-serif:
+  Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+
+// Contrast ratios for these pairs are in architecture §8.8.
+$color-ink: #1d3346;
 $color-text: #1f2328;
 $color-muted: #59636e;
-$color-background: #ffffff;
-$color-surface: #f6f8fa;
-$color-border: #d1d9e0;
-$color-accent: #0969da;
-$color-danger: #d1242f;
+$color-background: #f8f6f1;
+$color-surface: #ffffff;
+$color-surface-hover: #f3f0e8;
+$color-border: #e3ddd0;
+$color-control-border: #868a8f;
+$color-accent: #0b6e69;
+$color-accent-hover: #08524e;
+$color-accent-tint: #e3f1ef;
+$color-accent-text: #085e5a;
+$color-accent-hover-tint: #eef6f5;
+// Too light for text or lines on paper: the header, tints and decoration only.
+$color-mark: #e9b44c;
+$color-mark-tint: #fbf0d8;
+$color-mark-text: #6b4b0b;
+$color-danger: #b42318;
+$color-danger-hover: #912018;
+$color-danger-tint: #fdeeec;
+$color-on-ink: #ffffff;
+$color-on-ink-muted: #c9d4de;
+
+$text-sm: 0.875rem;
+$text-base: 1rem;
+$text-lg: 1.125rem;
+$text-xl: 1.375rem;
+$text-2xl: 1.75rem;
+$text-display: clamp(1.75rem, 1.2rem + 2.2vw, 2.5rem);
+$leading-tight: 1.2;
+$leading-normal: 1.5;
+$leading-relaxed: 1.65;
+
 $radius: 6px;
+$radius-lg: 10px;
+$radius-pill: 999px;
+$shadow-sm:
+  0 1px 2px rgb(29 51 70 / 0.06),
+  0 1px 3px rgb(29 51 70 / 0.08);
+$shadow-md: 0 6px 16px rgb(29 51 70 / 0.12);
+$shadow-lg: 0 16px 40px rgb(29 51 70 / 0.24);
+
 $space-1: 0.25rem;
 $space-2: 0.5rem;
 $space-3: 0.75rem;
 $space-4: 1rem;
+$space-5: 1.25rem;
 $space-6: 1.5rem;
 $space-8: 2rem;
+$space-12: 3rem;
+
+$control-height: 2.5rem;
+$header-height: 3.5rem;
 $content-width: 72rem;
+$reading-width: 44rem;
+$narrow: 40rem;
+
+$z-dropdown: 10;
+$z-header: 20;
+
+$duration: 150ms;
+$easing: ease-out;

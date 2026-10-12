@@ -1,0 +1,127 @@
+@use "./variables" as *;
+
+// States are wrapped in :where() so they add no specificity: the global
+// element rules that include these stay at zero, and any module class wins.
+
+@mixin focus-ring($color: $color-accent) {
+  outline: 2px solid $color;
+  outline-offset: 2px;
+}
+
+@mixin motion($properties...) {
+  @media (prefers-reduced-motion: no-preference) {
+    transition-property: $properties;
+    transition-duration: $duration;
+    transition-timing-function: $easing;
+  }
+}
+
+@mixin narrow {
+  @media (max-width: $narrow) {
+    @content;
+  }
+}
+
+@mixin card {
+  background-color: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+}
+
+@mixin control {
+  min-height: $control-height;
+  padding: $space-1 $space-3;
+  font: inherit;
+  font-weight: 400;
+  color: $color-text;
+  background-color: $color-surface;
+  border: 1px solid $color-control-border;
+  border-radius: $radius;
+  @include motion(border-color);
+
+  &:where(:hover) {
+    border-color: $color-muted;
+  }
+
+  &:where([aria-invalid="true"]) {
+    border-color: $color-danger;
+  }
+}
+
+// The shape every button style shares. It also works on a link drawn as a
+// button.
+@mixin button-base {
+  display: inline-flex;
+  gap: $space-2;
+  align-items: center;
+  justify-content: center;
+  min-height: $control-height;
+  padding: $space-1 $space-4;
+  font: inherit;
+  font-weight: 600;
+  line-height: $leading-tight;
+  text-align: center;
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: $radius;
+  cursor: pointer;
+  @include motion(color, background-color, border-color, box-shadow);
+
+  &:where(:disabled) {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+@mixin button-primary {
+  @include button-base;
+  color: $color-on-ink;
+  background-color: $color-accent;
+  border-color: $color-accent;
+
+  &:where(:hover:not(:disabled)) {
+    color: $color-on-ink;
+    background-color: $color-accent-hover;
+    border-color: $color-accent-hover;
+  }
+}
+
+@mixin button-danger {
+  @include button-base;
+  color: $color-on-ink;
+  background-color: $color-danger;
+  border-color: $color-danger;
+
+  &:where(:hover:not(:disabled)) {
+    color: $color-on-ink;
+    background-color: $color-danger-hover;
+    border-color: $color-danger-hover;
+  }
+}
+
+@mixin button-text($color: $color-accent) {
+  @include button-base;
+  padding-inline: $space-2;
+  color: $color;
+  background-color: transparent;
+
+  &:where(:hover:not(:disabled)) {
+    background-color: $color-accent-hover-tint;
+  }
+}
+
+@mixin button-icon {
+  @include button-base;
+  width: 2rem;
+  height: 2rem;
+  min-height: 0;
+  padding: 0;
+  color: $color-muted;
+  background-color: transparent;
+
+  &:where(:hover:not(:disabled)) {
+    color: $color-text;
+    background-color: $color-accent-hover-tint;
+  }
+}
