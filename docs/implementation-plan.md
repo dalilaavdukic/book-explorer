@@ -640,12 +640,17 @@ A phase is done when all of the following hold, in addition to the phase-specifi
      - how well the tests protect all of these
    - **Frontend:** structure, server state and private data, error handling, accessibility, types, and test quality.
    - **Across the project:** documentation accuracy, CI, dependency hygiene and reproducibility.
+   - **Error handling, held to how a real project runs**, in both the backend and the frontend:
+     - **Backend:** every failure gives a consistent, documented error response. Unexpected errors are logged with enough context to diagnose them, through a deliberate logging configuration. Nothing private, such as passwords or note text, is logged.
+     - **Frontend:** no uncaught error blanks the screen. Failed requests show a recoverable error state, and unexpected errors are caught and reported in one place.
+   - **Structure**, in both, against the recommended layout for Django and DRF and for a React, Vite and TypeScript app.
+     - In the frontend, each module sits in the right file: one component per file, and each hook, helper and type either in its own file or beside its only user, by a stated rule.
    - **Method:**
      - an independent, read-only `solution-assessor` agent, run by the user with `/assess-solution` in a fresh context
      - active probes against the running backend: malformed and hostile input, query counts, concurrent edits, and `manage.py check --deploy`
      - a one-off dependency scan with `npm audit` and `pip-audit`, run from a throwaway environment and added to nothing
    - **Findings** are verified, ranked and proposed, and the user decides which are fixed. A fix that changes behaviour comes with a test.
-   - **The report stays local,** in `.claude/plans/phase-7-assessment.md`, untracked. It isn't committed, and the README doesn't refer to it.
+   - **The report stays local,** in `.claude/plans/phase-7-assessment.md`, untracked. It isn't committed, and the README doesn't refer to it. The `/assess-solution` command is listed in the README with the other project commands.
 2. **Core acceptance.**
    - Write `docs/acceptance-checklist.md`. It covers J1–J10 and every core acceptance criterion, including the two-tab AC-A8 cases.
    - Verify each item with the method suited to it (§4, §7). Playwright MCP alone doesn't verify the checklist:
