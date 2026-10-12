@@ -1,6 +1,6 @@
 # Book Explorer: Implementation Plan
 
-*Living document, last updated 2026-10-12 (Phase 6). Employer requirements: `Development_Take-Home_Assignment.md`. Product requirements: `docs/spec.md`. Technical design: `docs/architecture.md`.*
+*Living document, last updated 2026-10-12 (Phase 7, solution assessment, added). Employer requirements: `Development_Take-Home_Assignment.md`. Product requirements: `docs/spec.md`. Technical design: `docs/architecture.md`.*
 
 ## 1. Purpose and how this plan is used
 
@@ -57,7 +57,7 @@ The checkpoint isn't a separate phase. It has no detailed plan or formal approva
 | 4 User-specific notes | Ownership-safe notes CRUD, paging, drafts at session boundaries | 2, 3 |
 | 5 Search, filtering and sorting | Search and filters, author and genre endpoints, the filter controls, "Books with my notes", the full list state in the URL | 2, 3, 4 |
 | 6 Visual design | A palette and shared styles, a tidier filter toolbar, a sticky header, styled cards, notes, states and login, and a genre panel that closes on an outside click | 1–5 |
-| 7 Final integration and delivery | Core acceptance walkthrough, optional enhancements, README, clean-clone check, submission | 1–6 |
+| 7 Final integration and delivery | Solution assessment, core acceptance walkthrough, optional enhancements, README, clean-clone check, submission | 1–6 |
 
 The order follows the dependencies:
 - Notes need authentication and books.
@@ -627,7 +627,26 @@ A phase is done when all of the following hold, in addition to the phase-specifi
 
 **Steps, in order**
 
-1. **Core acceptance.**
+1. **Solution assessment** (D8). A senior-level assessment of the whole solution, before anything is verified or tagged:
+   - **Requirements:** every requirement in the assignment, mapped to where the solution meets it, with evidence.
+   - **Backend, in the most depth:**
+     - security and authorization
+     - input validation and error handling: no input gives a 500
+     - data integrity: constraints, transactions and migrations
+     - API consistency
+     - query efficiency
+     - settings and configuration
+     - Django and DRF practice
+     - how well the tests protect all of these
+   - **Frontend:** structure, server state and private data, error handling, accessibility, types, and test quality.
+   - **Across the project:** documentation accuracy, CI, dependency hygiene and reproducibility.
+   - **Method:**
+     - an independent, read-only `solution-assessor` agent, run by the user with `/assess-solution` in a fresh context
+     - active probes against the running backend: malformed and hostile input, query counts, concurrent edits, and `manage.py check --deploy`
+     - a one-off dependency scan with `npm audit` and `pip-audit`, run from a throwaway environment and added to nothing
+   - **Findings** are verified, ranked and proposed, and the user decides which are fixed. A fix that changes behaviour comes with a test.
+   - **The report stays local,** in `.claude/plans/phase-7-assessment.md`, untracked. It isn't committed, and the README doesn't refer to it.
+2. **Core acceptance.**
    - Write `docs/acceptance-checklist.md`. It covers J1–J10 and every core acceptance criterion, including the two-tab AC-A8 cases.
    - Verify each item with the method suited to it (§4, §7). Playwright MCP alone doesn't verify the checklist:
      - **backend tests:** authorization, validation, database integrity and API behaviour
@@ -638,14 +657,14 @@ A phase is done when all of the following hold, in addition to the phase-specifi
    - Record each item's result and method, and any limitations still outstanding.
    - Fix whatever fails.
    - Commit and tag the core, so a submittable version exists before any optional work.
-2. **Enhancements (optional).** Start only after step 1 passes. Each one can be dropped on its own.
+3. **Enhancements (optional).** Start only after step 2 passes. Each one can be dropped on its own.
    - **AC-X2 first:** the author link on the detail page.
    - **Then AC-X1, per-reader note counts:**
      - every book list a reader fetches becomes private
      - the counts are computed in the list query
      - the public-or-private key decision from Phase 5 changes
      - the AC-A8 tests and checklist rows are run again, along with a query-count test for the counts
-3. **Delivery.**
+4. **Delivery.**
    - **Complete the README:**
      - every section the assignment requires
      - the TypeScript deviation and the 401 decision
@@ -665,6 +684,7 @@ A phase is done when all of the following hold, in addition to the phase-specifi
 
 **Done when**
 
+- The solution assessment is complete, and each of its findings is fixed or explicitly accepted by the user.
 - The checklist passes, and its results, methods and any outstanding limitations are recorded.
 - A clean clone works exactly as the README describes.
 - CI is green on the final commit.
@@ -775,6 +795,7 @@ Every journey is walked through end to end in Phase 7.
 | D5 | Playwright MCP is configured at local scope, outside the repository | The repository and reviewer setup stay unchanged |
 | D6 | Each phase is built on its own branch (`phase-N-<name>`) with a pull request that runs CI. After the phase is approved, the user merges it with GitHub's merge button, never squashing. | The user reviews each phase's diff on GitHub, and `main` only ever holds approved phases. Every commit is kept, each merge commit marks where a phase ends, and CI runs on the pull request and again on `main` |
 | D7 | A visual design phase (Phase 6) comes after the core features and before final integration, which becomes Phase 7. Its scope was agreed on 2026-10-12 (§5.6). | The core was built with plain styling; the look now matters for the submission. Because it comes before the acceptance walkthrough, the final checklist verifies the app as it is submitted. |
+| D8 | Phase 7 opens with an assessment of the whole solution (§5.7, step 1): the assignment's requirements, senior-level practice, and above all the backend's robustness. An independent agent reviews the code, active probes test the running backend, and the user decides which findings are fixed. The report stays local. Requested by the user on 2026-10-12. | Fixes land before the acceptance checklist verifies the app and before the core is tagged, so nothing is verified or tagged twice. |
 
 ## 10. Deferred to phase planning
 
@@ -797,5 +818,6 @@ Left open on purpose. Each item is decided in the detailed plan for the phase na
   - The shared mixins live in `styles/_mixins.scss`. A component chooses a button style by including a variant in its own module class (architecture §8.8).
   - The restyled sort `<select>` wasn't kept. The sort is a field `<select>` and a direction button (§5.6, architecture §8.8 and §10).
 - **Phase 7:**
+  - the assessment's rubric, the `solution-assessor` agent and its command, and the probes run against the backend
   - the format of the acceptance checklist
   - whether the repository is made public or shared privately with reviewers
