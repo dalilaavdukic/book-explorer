@@ -185,6 +185,42 @@ Above the book list are a search box, an author selector, a genre filter, the so
 - With SQLite, ignoring case works for ASCII letters only: "garcía" finds "García", but "GARCÍA" doesn't. A title or surname that starts with an accented letter sorts after Z.
 - Sorting doesn't skip leading articles, so *The Hobbit* sorts under T.
 
+## Visual design
+
+**Palette:** an ink-blue header, a teal accent for links and primary buttons, an amber mark on the header and behind notices, and a warm paper background.
+
+**Fonts and icons:**
+- Headings, book titles and the wordmark use the system's serif fonts. The body uses `system-ui`.
+- Icons are inline SVG.
+- No font or icon package is added.
+
+**Contrast** (WCAG 2 AA). Architecture §8.8 has the full table.
+- Every text pair is at least 4.5:1.
+- Control edges and focus rings are at least 3:1.
+- The header's focus ring is amber, because the teal ring would be 2.1:1 on ink.
+- Amber is too light for text or lines on paper (1.75:1). It appears only on the header, as a light tint behind dark text, or as a decorative bar.
+
+**Shared styles**, in `frontend/src/styles/`:
+- **`_variables.scss`:** the colours, type scale, spacing, radii, shadows, sizes and motion.
+- **`_mixins.scss`:** the reusable pieces:
+  - the control style
+  - the button styles
+  - card and notice panels
+  - the focus ring
+  - transitions that respect reduced motion
+  - the one breakpoint
+- **`global.scss`:** styles links, buttons and form controls at the element level. These rules have zero specificity, so any component's class overrides them.
+- **Button styles:** a plain `<button>` gets the default style. A component chooses primary, danger, text or icon by including that mixin in its own class, for example `.submit { @include button-primary; }`.
+
+**Genre panel.** Besides its own button and Escape, the panel closes on a click outside it, or when focus moves outside it. Clicking inside, including on its padding or heading, keeps it open.
+
+**Browser notes:**
+- Firefox shows no × in the search box.
+- Most Linux systems have none of the serif fonts the app names, so headings use the system's default serif.
+- In forced-colors mode (such as Windows High Contrast), the sort select and the search box's × go back to their native look.
+
+**Checked** in Chrome at 1280 px and 390 px wide, logged out and as a reader, with the keyboard and with reduced motion. There's no horizontal scroll at phone width.
+
 ## Tests and checks
 
 Backend, in `backend/` with the virtual environment active:

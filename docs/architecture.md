@@ -1,6 +1,6 @@
 # Book Explorer: Architecture
 
-*Living document, last updated 2026-10-12 (Phase 4). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
+*Living document, last updated 2026-10-12 (Phase 6). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
 
 ## 1. Purpose and status
 
@@ -50,7 +50,7 @@ Two decisions deliberately depart from the assignment's wording or from common d
 | Routing | react-router-dom v7, declarative `<Routes>` | Required by the assignment. Data loading lives in TanStack Query, so the router only routes. | React Router data loaders/actions |
 | Server state | TanStack Query | See §8.4 | Hand-written `useEffect` fetching; React Router loaders |
 | API types | Generated with openapi-typescript from the committed schema | Types can't drift from the API, and CI enforces it | Hand-written types |
-| Styling | SCSS modules (`Component.module.scss`) and semantic HTML | Styles scoped to each component; shared variables via Sass `@use`; native elements, plus two small custom filter controls (§8.8), give accessibility without a library | CSS Modules, Tailwind, a component library |
+| Styling | SCSS modules (`Component.module.scss`) and semantic HTML; the system font stacks (a serif one for headings) and inline SVG icons | Styles scoped to each component; shared variables and mixins via Sass `@use`; native elements, plus two small custom filter controls (§8.8), give accessibility without a library. System fonts and inline icons need no font or icon package. | CSS Modules, Tailwind, a component library, styled-components (CSS-in-JS: the same per-component scoping, but its CSS is generated in the browser while components render, which adds a runtime library and work on every styled render) |
 | Backend tests | Django's test runner with DRF's `APITestCase` | Named by the assignment; no extra dependencies | pytest + pytest-django |
 | Frontend tests | Vitest, React Testing Library and MSW, used for targeted tests | Vite-native; MSW fakes the network, so tests exercise the real API client and cache | No frontend tests; broad component coverage; Playwright end-to-end tests |
 | Lint and format | Ruff (Python); ESLint and Prettier (TypeScript) | One fast tool per language plus a formatter | flake8 + black + isort; mypy (not used) |
@@ -427,7 +427,8 @@ frontend/src/
 │                 GenreFilter (multiselect), sort control, query hooks
 ├── notes/        NotesSection, NoteForm, NoteItem, query and mutation hooks
 ├── components/   shared: Layout and Header, Pagination (book list and
-│                 notes), LoadingState, ErrorState, EmptyState, NotFound
+│                 notes), LoadingState, ErrorState, EmptyState, NotFound,
+│                 icons.tsx (inline SVG icons)
 ├── styles/       _variables.scss, _mixins.scss, global.scss
 └── App.tsx, main.tsx
 ```
@@ -552,13 +553,68 @@ Rejected alternatives:
 ### 8.8 Styling and accessibility
 
 - **Styling.** Each component has its own `Component.module.scss`. Shared variables and mixins are loaded with `@use` (Sass's older `@import` is deprecated).
+- **Shared styles**, in `styles/`:
+  - **`_variables.scss`** holds the design values: the palette, the type scale, spacing, radii, shadows, the control and header heights, layers and motion.
+  - **`_mixins.scss`:**
+    - `control`, for inputs, the select, textareas and the Genres button
+    - the button styles: `button-primary`, `button-danger`, `button-text($color)` and `button-icon`, all built on `button-base`
+    - `card`
+    - `notice`, a tinted panel with a bar down its left edge, used by notices, the session-expiry message, the error states and the login error
+    - `focus-ring($color)`
+    - `motion(...)`, which adds a transition only under `prefers-reduced-motion: no-preference`, so reduced motion is handled in one place
+    - `narrow`, the one breakpoint (40rem)
+  - **`global.scss`** styles links, buttons and form controls at the element level. Each of those rules sits entirely inside `:where()`, states included, so it has zero specificity. Any module class therefore overrides it, whatever order the sheets load in. Order matters here because `main.tsx` imports `App` before `global.scss`, so the global sheet comes last and would win ties.
+  - **Choosing a button style.** A plain `<button>` gets the default style from `global.scss`. A component picks another by including a variant in its own module class (`.submit { @include button-primary; }`), so the markup changes only by a class name. The variants also work on links drawn as buttons.
+- **Contrast** (WCAG 2 AA: 4.5:1 for text, 3:1 for control edges and focus indicators), computed from the values in `_variables.scss`:
+
+  | Pair | Ratio |
+  |---|---|
+  | text on paper / on white | 14.6 / 15.8 |
+  | ink headings on paper / on white | 12.1 / 13.0 |
+  | muted on paper / white / surface hover | 5.7 / 6.1 / 5.4 |
+  | muted on accent tint / mark tint / danger tint | 5.3 / 5.4 / 5.4 |
+  | accent links and text buttons on paper / white / their hover tint | 5.6 / 6.1 / 5.5 |
+  | accent link on mark tint (the session-expiry message) / its hover | 5.4 / 8.0 |
+  | white on accent / on accent hover | 6.1 / 9.0 |
+  | accent text on accent tint (genre badge) | 6.6 |
+  | mark text on mark tint ("p. N" chip) | 7.0 |
+  | text on mark tint / danger tint (notices, errors) | 14.0 / 14.0 |
+  | danger on white / paper / danger tint | 6.6 / 6.1 / 5.8 |
+  | white on danger / on danger hover | 6.6 / 8.7 |
+  | white on ink / on-ink muted on ink | 13.0 / 8.7 |
+  | control edge on white / paper / surface hover (needs 3) | 3.5 / 3.2 / 3.05 |
+  | accent focus ring on paper / white (needs 3) | 5.6 / 6.1 |
+  | mark focus ring on ink (needs 3) | 6.9 |
+  | header button edge on ink (needs 3) | 8.7 |
+
+  - Two pairs are never used:
+    - **amber on paper** (1.75:1): amber appears only on the header, as a light tint behind dark text, or as a decorative bar beside text
+    - **accent on ink** (2.1:1): hence the amber focus ring in the header
+  - Disabled controls are exempt (WCAG 1.4.3). They're shown at half opacity with a `not-allowed` cursor.
+- **Focus rings.** A 2px ring, offset 2px, on `:focus-visible`: teal everywhere, and amber inside the ink header. A ring is removed only where another replaces it. A book card's title link draws its ring on the `::after` that covers the card, so the ring goes round the whole card.
+- **Sticky header:**
+  - The header is `position: sticky` and keeps one fixed height (3.5rem). It never wraps: the username shrinks with an ellipsis instead.
+  - `scroll-padding-top` on `html` is the header's height plus 2rem. An element that takes focus or is scrolled to therefore stops below the header, with room for a card's padding and focus ring (WCAG 2.4.11, technique C43).
+  - The logout error is positioned just under the bar, so the bar's height never changes. While the error shows, it covers the top of the content.
+- **Restyled native controls:**
+  - **The `<select>`** has `appearance: none` and a chevron drawn as an SVG data URI.
+  - **The search box's ×** is a data URI of the same × the author field shows. It exists only in Chrome and Safari; Firefox has none.
+  - **Forced-colors mode** doesn't draw background images, so there both go back to their native appearance.
+  - **Icons in the markup** are inline SVG in `components/icons.tsx`. They're drawn in `currentColor`, so they stay visible in forced colors, and they're `aria-hidden`, so no accessible name changes.
 - **Accessibility through semantic HTML**, with no component library:
   - real `<label>` and `<button>` elements
   - the sort as a native `<select>` for the field and one button that flips the direction: it shows an up or down arrow and is named "Ascending" or "Descending", after the current order
-  - the genre filter as a button that opens a group of native checkboxes
+  - the genre filter as a button that opens a group of native checkboxes (closing rule below)
   - the author filter as a small combobox following the WAI-ARIA combobox pattern: a text input with a list of suggestions, usable with the arrow keys, Enter and Escape, with loading, no-match and error states (AC-S10)
   - the native `<dialog>` element for confirming a delete (AC-N5)
 - **Why two custom filter controls.** A native `<select>` can't search a list on the server, and `<select multiple>` needs Ctrl- or Cmd-click to pick several values, which few people discover. `<datalist>` was rejected for authors: it matches on text rather than ids and can't show loading, no-match or error states. Both controls are small and built for this one purpose; no autocomplete library is added.
+- **The genre panel's closing rule.** Besides its button and Escape:
+  - **A click outside the control** (button and panel) closes it, and focus stays where the click put it.
+    - The `document` listener is held only while the panel is open.
+    - It checks the event's `composedPath()`, because a click inside can re-render and detach its target, which `contains()` would then miss.
+    - It listens for `click` rather than `pointerdown`. On a touch screen, `pointerdown` fires before the browser knows the gesture is a scroll, so a swipe through the genres would close the panel.
+  - **Focus moving to an element outside the control** closes it.
+  - **Focus moving to nothing keeps it open.** That's a `null` `relatedTarget`, from a click on the panel's legend or padding, or from switching windows. Otherwise "clicking inside keeps it open" would fail. A click outside is still caught by the click rule.
 
 ## 9. Testing strategy
 
@@ -711,3 +767,20 @@ There are no automated browser end-to-end tests: they would need both servers an
 - **A selected author's name is never refetched** (`staleTime: Infinity`). Choosing an author puts it in the cache, so the name shows without a second request.
 - **Focus and announcements.** The author selector's status message stays on the page, so a message shown again is announced. A Clear button that disappears moves focus to its field: the author input, or the search box for Clear all.
 - **Test harness.** `renderApp` returns the current location, the navigation type and `navigate`, from a probe inside the router. The probe reports in a layout effect, because React Router commits location changes in a transition, and a test must never see a page before its URL. `test/setup.ts` stubs `window.scrollTo`, which jsdom lacks.
+
+**Settled during visual design (Phase 6):**
+- **No new dependencies.** Fonts are system stacks, and icons are inline SVG (§3).
+- **Design values** live in `styles/_variables.scss`, with their contrast ratios in §8.8.
+  - The old input border (`#d1d9e0`) was about 1.4:1 against white, below the 3:1 that WCAG 1.4.11 requires for control edges.
+  - Controls now have their own edge colour, `#868a8f` (3.5:1 on white). Cards, dividers and chips keep a light decorative edge, because they aren't controls.
+- **The header's focus ring is amber** (6.9:1 on ink), because the teal ring is 2.1:1 there.
+- **Book cards are clickable as a whole** through a stretched link. The title link's `::after` covers the card, so each card still has one link, named by its title.
+  - Trade-off: text in a card can't be selected by dragging, because the press lands on the link.
+- **Icons:** `components/icons.tsx` holds six inline SVG icons. The `<select>` chevron and the search box's × are CSS data URIs of the same shapes, because those elements can't hold markup.
+- **The genre panel's `relatedTarget` rule** (§8.8) has a test. jsdom's `blur()` moves focus to the document, so its `focusout` has a `null` `relatedTarget`, as a click on the panel's padding does in a browser.
+- **Sort.** The user judged the restyled six-option `<select>` in the browser and didn't keep it. The sort is now a field `<select>` plus one direction button (§8.8).
+  - The URL's six `sort` values, their parsing and the default are unchanged.
+  - `BOOK_SORT_FIELDS` is a `Record` over the generated values, so a sort added to the API fails the type check.
+  - `joinSort` builds `-${field}`, which compiles only while the API has a descending sort for every field.
+  - Trade-off: the button's name changes with each click, between "Ascending" and "Descending". Some screen readers don't announce a focused button's new name, so a screen-reader user may hear the new order only when the button is read again.
+- **Favicon:** `public/book-explorer.svg`, under a new name rather than Vite's `favicon.svg`. Browsers keep a favicon per site and don't reliably refetch one whose URL hasn't changed, so anyone who had run another Vite app on `localhost:5173` would keep seeing Vite's icon.

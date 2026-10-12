@@ -1,6 +1,6 @@
 # Book Explorer: Implementation Plan
 
-*Living document, last updated 2026-10-12 (Phase 6, visual design, added). Employer requirements: `Development_Take-Home_Assignment.md`. Product requirements: `docs/spec.md`. Technical design: `docs/architecture.md`.*
+*Living document, last updated 2026-10-12 (Phase 6). Employer requirements: `Development_Take-Home_Assignment.md`. Product requirements: `docs/spec.md`. Technical design: `docs/architecture.md`.*
 
 ## 1. Purpose and how this plan is used
 
@@ -44,7 +44,7 @@ The checkpoint isn't a separate phase. It has no detailed plan or formal approva
 | 3 Authentication | Complete, approved 2026-10-11 |
 | 4 User-specific notes | Complete, approved 2026-10-12 |
 | 5 Search, filtering and sorting | Complete, approved 2026-10-12 |
-| 6 Visual design | Not started |
+| 6 Visual design | In progress |
 | 7 Final integration and delivery | Not started |
 
 ## 2. Phases at a glance
@@ -792,10 +792,10 @@ Left open on purpose. Each item is decided in the detailed plan for the phase na
   - names of modules, components and hooks below the structure in architecture §8.2
   - wording of UI copy and error messages
   - exact test cases beyond the priorities in architecture §9
-- **Phase 6:**
-  - the exact values of the type scale, shadows and tints, and their contrast ratios
-  - where the shared mixins live, and how components choose a button style
-  - whether the restyled sort `<select>` stays: the user decides in the browser during the phase (§5.6)
+- **Phase 6:** settled.
+  - The type scale, shadows and tints are in `styles/_variables.scss`, and their contrast ratios in architecture §8.8.
+  - The shared mixins live in `styles/_mixins.scss`. A component chooses a button style by including a variant in its own module class (architecture §8.8).
+  - The restyled sort `<select>` wasn't kept. The sort is a field `<select>` and a direction button (§5.6, architecture §8.8 and §10).
 - **Phase 7:**
   - the format of the acceptance checklist
   - whether the repository is made public or shared privately with reviewers
