@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { logout, type User } from "../api/auth.ts";
 import { changeSession, useAuth } from "../auth/session.ts";
 import styles from "./Header.module.scss";
+import { BookIcon } from "./icons.tsx";
 
 export default function Header() {
   const { user } = useAuth();
@@ -12,6 +13,7 @@ export default function Header() {
     <header className={styles.header}>
       <div className={styles.inner}>
         <Link to="/" className={styles.brand}>
+          <BookIcon className={styles.brandIcon} />
           Book Explorer
         </Link>
         {user !== null ? (
@@ -19,7 +21,11 @@ export default function Header() {
         ) : (
           // Hidden on the login page, which would otherwise return to itself.
           location.pathname !== "/login" && (
-            <Link to="/login" state={{ from: location }}>
+            <Link
+              to="/login"
+              state={{ from: location }}
+              className={styles.button}
+            >
               Log in
             </Link>
           )
@@ -40,7 +46,12 @@ function Account({ user }: { user: User }) {
   return (
     <div className={styles.account}>
       <span className={styles.username}>{user.username}</span>
-      <button type="button" onClick={() => mutate()} disabled={isPending}>
+      <button
+        type="button"
+        className={styles.button}
+        onClick={() => mutate()}
+        disabled={isPending}
+      >
         Log out
       </button>
       {isError && (
