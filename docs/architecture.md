@@ -391,6 +391,7 @@ Pagination is chosen per endpoint, not set globally:
   - title → id
   - author `sort_name` → title → id
   - year → title → id
+  - In a descending sort only the chosen field is reversed: ties are still broken by title A–Z, then id. "Year, newest first" lists 1985 as *Blood Meridian*, *Love in the Time of Cholera*, *The Handmaid's Tale*.
 - **Notes** are ordered newest first by `created_at`, then by id (also descending), so notes saved in the same instant keep a fixed order and paging never repeats or skips one (AC-N13).
 - **Note counts** (AC-X1, an enhancement) are calculated in the same list query, never one query per book.
 
@@ -541,7 +542,7 @@ Rejected alternatives:
 - **Resets and clean-up:**
   - Changing search, filters or sort removes `page`, returning to page 1 (AC-S6).
   - Empty parameters are removed, and search text is trimmed before it's written to the URL.
-  - For visitors, `has_notes` is removed by replacing the history entry (AC-S3).
+  - For visitors, `has_notes` is removed by replacing the history entry (AC-S3). `page` is removed with it, because the page number belonged to the personalized list.
 - **The URL parameters are the list query's cache key**, under the reader's private root when the results are personalized (§8.5). Back navigation therefore restores both the controls and the results (AC-D3, AC-S5).
 - **The notes page is component state, not part of the URL** (AC-N13). Notes are private, so a link to a page of them is never shared, and history entries for note pages would make Back from a book step through them before returning to the list (AC-D3). Opening or refreshing a book starts at page 1.
   - Creating a note goes to page 1, where the new note appears. Editing stays on the current page.
@@ -695,3 +696,18 @@ There are no automated browser end-to-end tests: they would need both servers an
 - **Note mutations use `gcTime: 0`**, so a reader's note text in a finished mutation doesn't outlive the notes section, as with the login mutation's password.
 - **The `notes` tag** is on all five note operations, so Swagger UI groups them together.
 - **`page` is optional in the generated `Note` type.** drf-spectacular marks a response field required only if it's required on input or read-only, so the type is `page?: number | null`, although the API always sends it. The frontend reads it as `note.page ?? null`.
+
+**Settled during search, filtering and sorting (Phase 5):**
+- **Versions.** django-filter 26.2, the only new dependency, pinned in `backend/requirements.txt`. `@testing-library/user-event` still isn't added: `fireEvent.keyDown` drives the author selector's own key handler, and real keyboard use was checked in the browser.
+- **The notes list opts out of filtering.** django-filter is the global filter backend (§4), but `BookNoteListView` sets `filter_backends = []`. It takes no filters, and drf-spectacular's django-filter extension can't read its model without a request, which would fail the schema export (§7.7).
+- **`has_notes` is a choice filter** of `true` and `false`. django-filter's `BooleanFilter` turns any other value into "no filter", so `has_notes=banana` would be ignored instead of rejected (§7.5).
+- **Genre ids are checked before the lookup.** Each must be 1 to 18 digits. Django's `in` lookup isn't guarded against SQLite's integer overflow, so a 20-digit id would otherwise be a 500. An empty `genre` means no filter, as an empty `search` or `author` does.
+- **`genre` needed no schema annotation.** drf-spectacular's django-filter extension documents it as an integer array with `style: form` and `explode: true` by itself; the roadmap (§5.5) expected an annotation.
+- **Sorting uses `Lower`** on titles and on authors' sort keys, so "du Maurier, Daphne" sorts among the D's (§7.6). The default order and `sort=title` share one definition, `BOOK_ORDERINGS` in `catalog/filters.py`.
+- **Parameter descriptions** in the schema come from each filter's `help_text`.
+- **One function decides public or private.** `bookListQuery` in `books/queries.ts` puts a `has_notes` list under the reader's private root and every other list under the public key (§8.5). The list keeps no placeholder data while the next one loads, so results never carry over to another reader, or from a private list to a public one.
+- **Genres are fetched when their panel first opens**, so the list page makes no extra request until they're needed.
+- **The search box writes through the latest URL setter.** React Router's setter reads the URL of the render that created it, so a write held over from an earlier render would undo a filter changed during the pause.
+- **A selected author's name is never refetched** (`staleTime: Infinity`). Choosing an author puts it in the cache, so the name shows without a second request.
+- **Focus and announcements.** The author selector's status message stays on the page, so a message shown again is announced. A Clear button that disappears moves focus to its field: the author input, or the search box for Clear all.
+- **Test harness.** `renderApp` returns the current location, the navigation type and `navigate`, from a probe inside the router. The probe reports in a layout effect, because React Router commits location changes in a transition, and a test must never see a page before its URL. `test/setup.ts` stubs `window.scrollTo`, which jsdom lacks.

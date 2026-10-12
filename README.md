@@ -50,6 +50,7 @@ npm run dev
 2. In a second terminal, start the frontend with `npm run dev`. It runs on port 5173.
 3. Open **http://localhost:5173** and log in as `alice` (password `alice-password`), or browse the catalog without logging in.
 4. Open a book and add a note as `alice`. Then log out and log in as `bob` (password `bob-password`): the same book shows only his notes, none of hers.
+5. Search, filter and sort the catalog as a visitor. Then log in as `alice` and turn on "Books with my notes": only the books she has notes on are listed. Log in as `bob` and do the same: he sees only his.
 
 The Vite dev server forwards `/api`, `/admin` and `/static` to Django, so the whole app is served from one origin:
 
@@ -140,6 +141,49 @@ A logged-in reader keeps private notes on each book, in a section under the book
 - If the session expires, or the reader logs out in another tab, an open form keeps its text. It says the session has expired and offers "Log in again", and Save stays disabled.
 - Logging out in this tab, or any reader logging in, discards the draft, so the next reader never sees it.
 - **Tradeoff:** logging in again discards the draft too, and the save isn't retried afterwards, so the message asks the reader to copy anything they want to keep. A production app would store drafts so a long note can't be lost. For this assignment, keeping the text in the form after a failed save is enough (spec §6).
+
+## Search, filters and sorting
+
+Above the book list are a search box, an author selector, a genre filter, the sort order and, for a logged-in reader, "Books with my notes". A book must match the search and every filter. The whole view lives in the URL, so refreshing, Back and Forward, and a shared link all restore it.
+
+**Parameters** of the book list. The app's URL uses the same names as the API (`GET /api/books/`):
+
+| Parameter | What it does |
+|---|---|
+| `search` | Every word must appear in the title or the author's name, ignoring case; part of a word is enough. Up to 100 characters. `%`, `_` and quotes match literally. |
+| `author` | An author's id: only that author's books |
+| `genre` | A genre's id, repeated for several (`genre=2&genre=5`): books in any of them |
+| `has_notes` | `true`: only the books the reader has notes on. Needs a login. |
+| `sort` | `title` (the default), `author` (by surname) or `year`, with a leading `-` for descending. Case is ignored, and ties are broken by title A–Z, then id. |
+| `page`, `page_size` | 12 books per page; the API accepts a `page_size` from 1 to 100 |
+
+**How the controls behave:**
+- The search runs after a 300 ms pause in typing, and typing doesn't add history entries. Every other change adds one, so Back undoes one change at a time.
+- Changing the search, a filter or the sort goes back to page 1.
+- "Clear all" removes the search and every filter, and keeps the sort.
+
+**Author suggestions.** Typing in the author selector suggests up to 10 authors whose name contains the text, by surname, after the same pause. The arrow keys, Enter and Escape work as in any combobox. Only the chosen author's id goes into the URL, and a link with `author=<id>` shows that author's name.
+
+**Books with my notes** is a personal list, so it needs a login:
+- Visitors don't see the control. A visitor who opens a link with `has_notes=true` gets the public catalog, and the parameter is removed from the URL.
+- Without a login, the API answers `has_notes=true` with 401. The reader always comes from the session, so no parameter can ask for another reader's books.
+- In the browser, these results are cached under the reader's id, like notes, and removed when the session ends or another reader logs in.
+
+**Invalid values.** A malformed value, such as `sort=banana` or `genre=abc`, or an author or genre that doesn't exist, gets a 400 from the API with a message for each bad parameter, never a server error. The app shows "This link contains invalid filters", whose "Clear all" link goes back to the full catalog. It recognizes a malformed value itself, without a request. Unknown parameter names, such as `utm_source`, are ignored.
+
+**Endpoints**, all public; only `has_notes=true` needs a login:
+
+| Method and path | What |
+|---|---|
+| `GET /api/books/` | The book list, with the parameters above |
+| `GET /api/authors/` | Author suggestions: `search`, and `limit` from 1 to 20 (default 10) |
+| `GET /api/authors/{id}/` | One author, for showing the selected author's name |
+| `GET /api/genres/` | The genres that have at least one book |
+
+**Limitations** (spec §6):
+- Search and author suggestions don't ignore accents: "Garcia" doesn't find "García".
+- With SQLite, ignoring case works for ASCII letters only: "garcía" finds "García", but "GARCÍA" doesn't. A title or surname that starts with an accented letter sorts after Z.
+- Sorting doesn't skip leading articles, so *The Hobbit* sorts under T.
 
 ## Tests and checks
 
