@@ -31,6 +31,8 @@ class NotePagination(StrictPageNumberPagination):
 class BookNoteListView(generics.ListCreateAPIView):
     serializer_class = NoteSerializer
     pagination_class = NotePagination
+    # No filters, and drf-spectacular can't read the model without a request.
+    filter_backends = []
 
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)

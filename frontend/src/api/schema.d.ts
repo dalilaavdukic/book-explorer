@@ -279,10 +279,27 @@ export interface operations {
     books_list: {
         parameters: {
             query?: {
+                /** @description Only books by this author. */
+                author?: number;
+                /** @description Only books in any of these genres. Repeat for several. */
+                genre?: number[];
                 /** @description A page number within the paginated result set. */
                 page?: number;
                 /** @description Number of results to return per page. */
                 page_size?: number;
+                /** @description Words that must all appear in the title or the author's name. */
+                search?: string;
+                /**
+                 * @description The order of the list, `title` by default. A leading `-` means descending. Ties are broken by title, then id.
+                 *
+                 *     * `title` - title
+                 *     * `-title` - -title
+                 *     * `author` - author
+                 *     * `-author` - -author
+                 *     * `year` - year
+                 *     * `-year` - -year
+                 */
+                sort?: "-author" | "-title" | "-year" | "author" | "title" | "year";
             };
             header?: never;
             path?: never;

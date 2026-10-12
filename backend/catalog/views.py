@@ -1,9 +1,9 @@
-from django.db.models.functions import Lower
 from rest_framework import generics
 from rest_framework.permissions import AllowAny
 
 from config.pagination import StrictPageNumberPagination
 
+from .filters import BOOK_ORDERINGS, BookFilter
 from .models import Book
 from .serializers import BookDetailSerializer, BookSerializer
 
@@ -16,8 +16,9 @@ class BookListView(generics.ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = BookSerializer
     pagination_class = BookPagination
+    filterset_class = BookFilter
     queryset = Book.objects.select_related("author", "genre").order_by(
-        Lower("title"), "id"
+        *BOOK_ORDERINGS["title"]
     )
 
 

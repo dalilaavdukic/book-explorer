@@ -55,6 +55,20 @@ paths:
     get:
       operationId: books_list
       parameters:
+      - in: query
+        name: author
+        schema:
+          type: integer
+        description: Only books by this author.
+      - in: query
+        name: genre
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Only books in any of these genres. Repeat for several.
+        explode: true
+        style: form
       - name: page
         required: false
         in: query
@@ -67,6 +81,31 @@ paths:
         description: Number of results to return per page.
         schema:
           type: integer
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Words that must all appear in the title or the author's name.
+      - in: query
+        name: sort
+        schema:
+          type: string
+          enum:
+          - -author
+          - -title
+          - -year
+          - author
+          - title
+          - year
+        description: |-
+          The order of the list, `title` by default. A leading `-` means descending. Ties are broken by title, then id.
+
+          * `title` - title
+          * `-title` - -title
+          * `author` - author
+          * `-author` - -author
+          * `year` - year
+          * `-year` - -year
       tags:
       - books
       security:
