@@ -6,7 +6,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import { expect, onTestFinished, test, vi } from "vitest";
 import type { Session, User } from "./api/auth.ts";
 import type { Book, BookDetail } from "./api/books.ts";
@@ -378,4 +378,85 @@ test("a failed logout's message can be dismissed, and focus moves to Log out", a
   expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
   expect(screen.getByRole("button", { name: "Log out" })).toHaveFocus();
   expect(screen.getByText("alice")).toBeInTheDocument();
+});
+
+test("each page is named in the document title", async () => {
+  serveBooks([nineteenEightyFour]);
+  serveBook(nineteenEightyFourDetail);
+  const pages = [
+    ["/", "Books — Book Explorer"],
+    ["/books/7", "Nineteen Eighty-Four — Book Explorer"],
+    ["/books/abc", "Book not found — Book Explorer"],
+    ["/login", "Log in — Book Explorer"],
+    ["/nope", "Page not found — Book Explorer"],
+    ["/?page=abc", "This page doesn't exist — Book Explorer"],
+    ["/?sort=banana", "This link contains invalid filters — Book Explorer"],
+  ];
+  for (const [route, title] of pages) {
+    const { unmount } = renderApp(route);
+
+    await waitFor(() => expect(document.title).toBe(title));
+    unmount();
+  }
+});
+
+test("a book that is still loading says so in the document title", async () => {
+  server.use(
+    http.get("/api/books/7/", async () => {
+      await delay("infinite");
+      return HttpResponse.json(nineteenEightyFourDetail);
+    }),
+  );
+
+  renderApp("/books/7");
+
+  await waitFor(() =>
+    expect(document.title).toBe("Loading book… — Book Explorer"),
+  );
+});
+
+test("opening a book moves focus to its title, and Back to books to the list's heading", async () => {
+  serveBooks([nineteenEightyFour]);
+  serveBook(nineteenEightyFourDetail);
+  renderApp("/");
+  const link = await screen.findByRole("link", {
+    name: "Nineteen Eighty-Four",
+  });
+  expect(document.body).toHaveFocus();
+
+  fireEvent.click(link);
+
+  const title = await screen.findByRole("heading", {
+    level: 1,
+    name: "Nineteen Eighty-Four",
+  });
+  await waitFor(() => expect(title).toHaveFocus());
+
+  fireEvent.click(screen.getByRole("link", { name: "Back to books" }));
+
+  const heading = await screen.findByRole("heading", {
+    level: 1,
+    name: "Books",
+  });
+  await waitFor(() => expect(heading).toHaveFocus());
+});
+
+test("a filter or page change doesn't move focus to the heading", async () => {
+  serveBooks([nineteenEightyFour], 30);
+  const { location } = renderApp("/");
+  await screen.findByRole("link", { name: "Nineteen Eighty-Four" });
+  const heading = screen.getByRole("heading", { level: 1, name: "Books" });
+
+  const direction = screen.getByRole("button", { name: "Ascending" });
+  direction.focus();
+  fireEvent.click(direction);
+  await waitFor(() => expect(location().search).toBe("?sort=-title"));
+  await screen.findByRole("link", { name: "Nineteen Eighty-Four" });
+
+  expect(screen.getByRole("button", { name: "Descending" })).toHaveFocus();
+
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  await screen.findByText("Page 2 of 3");
+
+  expect(heading).not.toHaveFocus();
 });

@@ -5,6 +5,7 @@ import EmptyState from "../components/EmptyState.tsx";
 import ErrorState from "../components/ErrorState.tsx";
 import LoadingState from "../components/LoadingState.tsx";
 import NotFound from "../components/NotFound.tsx";
+import PageTitle from "../components/PageTitle.tsx";
 import Pagination from "../components/Pagination.tsx";
 import BookFilters from "./BookFilters.tsx";
 import styles from "./BookListPage.module.scss";
@@ -111,7 +112,8 @@ function BookResults({ params, listUrl }: BookResultsProps) {
 
   return (
     <>
-      <h1>Books</h1>
+      <PageTitle name="Books" />
+      <h1 tabIndex={-1}>Books</h1>
       <BookFilters
         params={params}
         listUrl={listUrl}

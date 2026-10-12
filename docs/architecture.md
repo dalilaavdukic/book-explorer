@@ -1,6 +1,6 @@
 # Book Explorer: Architecture
 
-*Living document, last updated 2026-10-12 (Phase 7, error boundaries). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
+*Living document, last updated 2026-10-12 (Phase 7, page titles and focus). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
 
 ## 1. Purpose and status
 
@@ -615,6 +615,12 @@ Rejected alternatives:
     - **accent on ink** (2.1:1): hence the amber focus ring in the header
   - Disabled controls are exempt (WCAG 1.4.3). They're shown at half opacity with a `not-allowed` cursor.
 - **Focus rings.** A 2px ring, offset 2px, on `:focus-visible`: teal everywhere, and amber inside the ink header. A ring is removed only where another replaces it. A book card's title link draws its ring on the `::after` that covers the card, so the ring goes round the whole card.
+- **Page titles** (WCAG 2.4.2). Each page renders its own `<title>` through `components/PageTitle.tsx`, as "<page> — Book Explorer": "Books", the book's title ("Loading book…" while it loads), "Log in", and each not-found view after its heading. React 19 places it in the document's head, ahead of `index.html`'s title, which stays the default until the app loads.
+- **Focus on navigation.** When a navigation changes the path (opening a book, Back to books, logging in, Back and Forward), `Layout` moves focus to the new page's `<h1>`, which has `tabIndex={-1}`, so a screen reader announces the page.
+  - **Not on the first load,** and not when only the search changes (filters, sort, page), which would pull focus from the control in use.
+  - **A page still loading** gets focus on its heading once the heading appears, unless the reader has moved focus meanwhile.
+  - **Without scrolling** (`preventScroll`). `focus()` scrolls its element into view by default, which on Back and Forward would undo the browser's scroll restoration that J1 relies on. A new page is already at the top.
+  - **No ring on the heading.** `global.scss` removes the `:focus-visible` ring from a focused `h1[tabindex="-1"]`: it isn't a control, and a ring would make it look like one. The next Tab continues from it.
 - **Sticky header:**
   - The header is `position: sticky` and keeps one fixed height (3.5rem). It never wraps: the username shrinks with an ellipsis instead.
   - `scroll-padding-top` on `html` is the header's height plus 2rem. An element that takes focus or is scrolled to therefore stops below the header, with room for a card's padding and focus ring (WCAG 2.4.11, technique C43).

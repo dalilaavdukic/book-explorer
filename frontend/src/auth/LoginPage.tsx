@@ -3,6 +3,7 @@ import { type FormEvent, useState } from "react";
 import { Navigate, type To, useLocation } from "react-router-dom";
 import { login } from "../api/auth.ts";
 import { ApiError } from "../api/client.ts";
+import PageTitle from "../components/PageTitle.tsx";
 import styles from "./LoginPage.module.scss";
 import { changeSession, useAuth } from "./session.ts";
 
@@ -45,7 +46,8 @@ function LoginForm() {
 
   return (
     <section className={styles.login}>
-      <h1>Log in</h1>
+      <PageTitle name="Log in" />
+      <h1 tabIndex={-1}>Log in</h1>
       <form className={styles.form} onSubmit={handleSubmit}>
         <label className={styles.field}>
           Username

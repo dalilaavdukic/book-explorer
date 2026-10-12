@@ -4,6 +4,7 @@ import ErrorState from "../components/ErrorState.tsx";
 import { ArrowLeftIcon } from "../components/icons.tsx";
 import LoadingState from "../components/LoadingState.tsx";
 import NotFound from "../components/NotFound.tsx";
+import PageTitle from "../components/PageTitle.tsx";
 import NotesSection from "../notes/NotesSection.tsx";
 import styles from "./BookDetailPage.module.scss";
 import { parsePositiveInteger } from "./parsePositiveInteger.ts";
@@ -43,7 +44,9 @@ function BookDetail({ id }: { id: number }) {
     content = (
       <>
         <article className={styles.book}>
-          <h1 className={styles.title}>{book.title}</h1>
+          <h1 tabIndex={-1} className={styles.title}>
+            {book.title}
+          </h1>
           <p className={styles.author}>by {book.author.name}</p>
           <dl className={styles.facts}>
             <div>
@@ -64,6 +67,11 @@ function BookDetail({ id }: { id: number }) {
 
   return (
     <>
+      <PageTitle
+        name={
+          book?.title ?? (isError ? "Book couldn't be loaded" : "Loading book…")
+        }
+      />
       <p className={styles.back}>
         <Link to={{ pathname: "/", search: listSearch }}>
           <ArrowLeftIcon />
