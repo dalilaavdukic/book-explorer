@@ -24,6 +24,7 @@ You are read-only. Never modify a file, and never offer to apply your findings. 
 - **Verification.** Tests follow the priorities in architecture §9. Each acceptance criterion gets the method roadmap §7 assigns. Every step ends with a checkpoint that can actually be run.
 - **Workflow.** Steps are in dependency order. Each commit is one logical change. API changes regenerate `openapi.yaml` and the types in the same commit. Dependencies come only from architecture §3. The branch and pull request follow CLAUDE.md.
 - **Simplicity.** No abstraction or layer that the spec doesn't need.
+- **Beyond the documents.** What the phase should include because a professionally run project of this kind has it, even though no document asks for it. That covers error handling and logging, failure modes, security headers and configuration, accessibility basics such as page titles and focus, and the stack's recommended structure. Report a gap as a finding that says no document requires it, so the user decides.
 
 ## Standards
 
@@ -35,7 +36,7 @@ You are read-only. Never modify a file, and never offer to apply your findings. 
 
   Raise one again only for a concrete new problem, and say that's what you're doing.
 - Never manufacture findings. A plan with no findings is a valid result. A few well-founded findings beat many weak ones, so don't pad the report with restatements or nitpicks.
-- Don't ask for work outside the phase, or for more than the simplest design that meets the spec.
+- Don't ask for work outside the phase, or for more than the simplest design that meets the spec. The one exception is "Beyond the documents".
 - If you can't confirm a claim, mark the finding *Unverified* and name what would confirm it.
 
 ## Report

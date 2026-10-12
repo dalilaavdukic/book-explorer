@@ -59,6 +59,7 @@ Never say a test or check passed unless it ran and you saw its output. State wha
 - Authorization lives on the server (architecture §6.5, §6.6). Endpoints require login by default; public ones, such as the catalog, opt in and work without logging in. A logged-out request to a protected endpoint, or for personalized results (`has_notes=true`), gets 401; a failed CSRF check gets 403. A logged-in reader can list and create only their own notes on a book. Every notes query starts from the reader's own notes, so another reader's individual note returns 404 (AC-N6). A note's owner comes from the session and its book from the URL.
 - Private data in the browser (architecture §8.5, AC-A8): private query keys go under the reader's `private` root, and every change of reader goes through the single session-transition function. One reader must never see another's notes, personalized results or unsaved draft.
 - Add tests with each feature, prioritized as in architecture §9: authorization first.
+- Hold the work to how a professionally run project works, not only to the documents. Raise each gap, such as missing logging or error handling, as a decision with a recommendation.
 - An API change means regenerating `openapi.yaml` and the TypeScript types and committing them with the change; regenerating again afterwards must produce no diff. Change them only through the generators, and never write API types by hand.
 
 ## Working with the user
