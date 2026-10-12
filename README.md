@@ -49,6 +49,7 @@ npm run dev
 1. Start the backend with `python manage.py runserver`. It runs on port 8000.
 2. In a second terminal, start the frontend with `npm run dev`. It runs on port 5173.
 3. Open **http://localhost:5173** and log in as `alice` (password `alice-password`), or browse the catalog without logging in.
+4. Open a book and add a note as `alice`. Then log out and log in as `bob` (password `bob-password`): the same book shows only his notes, none of hers.
 
 The Vite dev server forwards `/api`, `/admin` and `/static` to Django, so the whole app is served from one origin:
 
@@ -106,6 +107,39 @@ python manage.py migrate catalog       # load them again
 ```
 
 Rolling back removes the seeded books, and the seeded authors and genres that no remaining book uses. Books added through Django admin are kept, with their authors and genres.
+
+## Notes
+
+A logged-in reader keeps private notes on each book, in a section under the book's details. A visitor sees a "Log in to add notes" link there instead.
+
+**Rules** (spec §5.5):
+- **Text:** required, up to 5,000 characters. Surrounding whitespace is trimmed, and line breaks are kept. A note is always shown as plain text.
+- **Page:** optional, a whole number from 1 to 10,000. It can be cleared when editing.
+- **Times:** each note shows when it was created, and "Edited" with a time once its text or page has changed.
+- Notes are listed newest first, 20 per page.
+- Deleting asks for confirmation and can't be undone.
+- A book that has notes can't be deleted, even in Django admin, until its notes are.
+
+**Endpoints**, all requiring a login:
+
+| Method and path | What |
+|---|---|
+| `GET /api/books/{id}/notes/` | The reader's notes on the book, newest first, paginated |
+| `POST /api/books/{id}/notes/` | Add a note to the book |
+| `GET`, `PATCH`, `DELETE /api/notes/{id}/` | Read, edit or delete one of the reader's notes |
+
+**How notes stay private:**
+- Every notes query starts from the logged-in reader's own notes. Another reader's note is never found, so asking for it gets 404, exactly as a note that doesn't exist does. The API never reveals that it exists.
+- A note's owner comes from the session and its book from the URL. A `user` or `book` in the request body is ignored.
+- Without a login, every notes request gets 401. A write without the CSRF token gets 403.
+- In the browser, a reader's notes are cached under keys that include their id, and they're removed whenever the session ends or another reader logs in.
+
+**Paging after a change.** Adding a note goes to page 1, where the new note is first. Deleting the only note on the last page goes back a page. Otherwise the reader stays on the current page.
+
+**Unsaved drafts when the session ends:**
+- If the session expires, or the reader logs out in another tab, an open form keeps its text. It says the session has expired and offers "Log in again", and Save stays disabled.
+- Logging out in this tab, or any reader logging in, discards the draft, so the next reader never sees it.
+- **Tradeoff:** logging in again discards the draft too, and the save isn't retried afterwards, so the message asks the reader to copy anything they want to keep. A production app would store drafts so a long note can't be lost. For this assignment, keeping the text in the form after a failed save is enough (spec §6).
 
 ## Tests and checks
 

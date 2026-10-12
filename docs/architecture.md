@@ -1,6 +1,6 @@
 # Book Explorer: Architecture
 
-*Living document, last updated 2026-10-11 (Phase 3). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
+*Living document, last updated 2026-10-12 (Phase 4). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
 
 ## 1. Purpose and status
 
@@ -112,7 +112,7 @@ Why the model looks like this:
   - Deleting a reader's account deletes their own notes (`CASCADE`).
   - Tidying the catalog never destroys readers' work. Deleting an author or genre that still has books, or a book that still has notes, is refused (`PROTECT`), and Django admin lists what blocks it. The admin then deals with those records deliberately.
   - Cascading from a book to its notes was rejected: an admin removing a book would delete other readers' notes as a side effect, and because a note can't move to another book (spec §7), they couldn't be kept.
-- **`edited_at` instead of `updated_at`.** Django's `auto_now_add` and `auto_now` produce timestamps that differ by microseconds when a note is created, so "updated after created" would mark every new note as edited. `edited_at` stays empty until an existing note's text or page actually changes. The model sets it, so edits made in Django admin count too.
+- **`edited_at` instead of `updated_at`.** Django's `auto_now_add` and `auto_now` produce timestamps that differ by microseconds when a note is created, so "updated after created" would mark every new note as edited. `edited_at` stays empty until an existing note's text or page actually changes. The model sets it, so edits made in Django admin count too: saving an existing note reads its stored text and page, and sets `edited_at` to now if either differs. Comparing with the stored row costs one extra query per edit. A copy taken when the note is loaded was rejected, because it goes stale after `refresh_from_db()`.
 - **One composite index.** It matches the main notes query (one reader's notes on one book, newest first, plus the count that pagination needs), and its first two columns also answer the `has_notes` check. At this data size the benefit isn't measurable; the index is there because it fits the feature's actual access pattern.
 - **Validation in layers** (§4). Notes can be written both through the API and in admin, so the rules live on the model, with database constraints as a backstop.
 - **Deleting is permanent (no soft delete).** Nothing in the spec asks for undo, a trash bin or an audit trail, and the confirmation step (AC-N5) protects against accidental deletion. Soft delete would add a "not deleted" condition to every owner-filtered query, which is exactly where authorization bugs hide. It would also go against what a reader expects when deleting a private note (J6). Django admin's change history already records admin deletions.
@@ -512,7 +512,8 @@ A draft is the text and page in an open note form, whether creating or editing. 
 - **Keeping a draft is only for the reader whose session just ended**, so a note isn't lost to expiry. An open form with unsaved changes is rendered independently of the cached notes list, so it survives the cache clean-up.
 - **Expiry and a logout in another tab look the same from this tab** (a 401, or a re-check that finds nobody), so both keep the draft. Only a logout made in this tab is known to be deliberate.
 - **Once any reader is logged in, the previous draft is gone**, so a new reader never sees it. That includes the same reader logging in again, since AC-N12 already says a draft doesn't survive a login.
-- **Discarding is one step.** The session function remounts the notes section (for example by changing its React `key`), which resets every open form, and the notes page, to its initial state.
+- **Discarding is one step.** `applySession` increments a drafts counter, stored in the query cache under `['drafts']`, outside the `private` root. The notes section includes the counter in its React `key`, so the change remounts it, which resets every open form, and the notes page, to its initial state. The counter changes in the same call that removes the private entries, so no render shows a new reader next to the old draft.
+- **Only the header's logout counts as logging out in this tab.** It calls `changeSession` with `{ loggedOutHere: true }`. A 401 or a re-check passes no flag, so the session function decides from the old and new reader alone: a reader the tab wasn't showing discards the draft, and finding nobody keeps it.
 
 Rejected alternatives:
 
@@ -684,3 +685,13 @@ There are no automated browser end-to-end tests: they would need both servers an
 - **Session state and private data:** `auth/session.ts` holds `applySession`, `changeSession`, `useAuth` and `privateQueryOptions`. The 401 hooks are in `api/queryClient.ts` (§8.5).
 - **Return after login:** the target is fixed when the login page opens (§8.6).
 - **Type-aware lint:** typescript-eslint's type-checked recommended rules (§9.4).
+
+**Settled during notes (Phase 4):**
+- **No new dependencies.** `@testing-library/user-event` wasn't added, because `fireEvent` covers every notes test.
+- **Notes URLs:** a `notes` app with its own `urls.py`, so `catalog` doesn't depend on it (§2). The list view resolves the book in DRF's `initial()`, after the authentication and permission checks: a visitor gets 401 first, and an unknown book gets 404 before the request body is validated (AC-N8).
+- **`Detail` schema component:** a small `DetailSerializer` (`{"detail": …}`) describes the 401 and 404 responses of the note operations (§7.7).
+- **The page field is a text input**, checked in the form before sending. A number input turns "abc" into an empty value, which would save the note without its page.
+- **`<dialog>` stub:** jsdom implements only the `open` attribute of `<dialog>`, so `test/setup.ts` stubs `showModal()` and `close()`.
+- **Note mutations use `gcTime: 0`**, so a reader's note text in a finished mutation doesn't outlive the notes section, as with the login mutation's password.
+- **The `notes` tag** is on all five note operations, so Swagger UI groups them together.
+- **`page` is optional in the generated `Note` type.** drf-spectacular marks a response field required only if it's required on input or read-only, so the type is `page?: number | null`, although the API always sends it. The frontend reads it as `note.page ?? null`.
