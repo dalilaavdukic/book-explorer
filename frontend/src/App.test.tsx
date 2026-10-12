@@ -1,9 +1,16 @@
 import { focusManager } from "@tanstack/react-query";
-import { act, fireEvent, screen, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { expect, onTestFinished, test, vi } from "vitest";
 import type { Session, User } from "./api/auth.ts";
 import type { Book, BookDetail, PaginatedBookList } from "./api/books.ts";
+import { serveNotes } from "./test/notesApi.ts";
 import { renderApp } from "./test/renderApp.tsx";
 import { server } from "./test/server.ts";
 
@@ -179,6 +186,34 @@ test("Book not found isn't refetched when the tab regains focus", async () => {
   expect(bookRequests()).toHaveLength(1);
 });
 
+test("the book stays on screen when a refetch on focus fails", async () => {
+  onTestFinished(() => focusManager.setFocused(undefined));
+  let requests = 0;
+  server.use(
+    http.get("/api/books/7/", () => {
+      requests += 1;
+      return requests === 1
+        ? HttpResponse.json(nineteenEightyFourDetail)
+        : HttpResponse.json({ detail: "Server error." }, { status: 500 });
+    }),
+  );
+  renderApp("/books/7");
+  await screen.findByRole("article");
+
+  // eslint-disable-next-line @typescript-eslint/require-await
+  await act(async () => {
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+  });
+  await waitFor(() => expect(requests).toBe(2));
+
+  // Nothing on screen should change, so give the failure time to show.
+  await expect(
+    screen.findByRole("alert", undefined, { timeout: 200 }),
+  ).rejects.toThrow();
+  expect(screen.getByRole("article")).toBeInTheDocument();
+});
+
 test("a book opened directly shows every attribute and links to the first page", async () => {
   serveBook(nineteenEightyFourDetail);
 
@@ -243,6 +278,7 @@ test("logging in from a book returns to it, with the reader in the header", asyn
   onTestFinished(() => scrollTo.mockRestore());
   setCsrfCookie("the-token");
   serveBook(nineteenEightyFourDetail);
+  serveNotes(7);
   const logins = recordPosts("/api/auth/login/", () =>
     HttpResponse.json<Session>({ user: alice }),
   );

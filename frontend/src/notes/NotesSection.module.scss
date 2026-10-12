@@ -1,0 +1,41 @@
+@use "../styles/variables" as *;
+
+.notes {
+  max-width: 44rem;
+  margin-top: $space-8;
+  padding-top: $space-6;
+  border-top: 1px solid $color-border;
+}
+
+.heading {
+  margin: 0 0 $space-4;
+  font-size: 1.25rem;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  margin: $space-6 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notice {
+  margin: $space-6 0 0;
+  padding: $space-3 $space-4;
+  border: 1px solid $color-border;
+  border-radius: $radius;
+  background: $color-surface;
+}
+
+.editing {
+  margin-top: $space-6;
+  padding: $space-3 $space-4;
+  border: 1px solid $color-accent;
+  border-radius: $radius;
+
+  .list & {
+    margin-top: 0;
+  }
+}

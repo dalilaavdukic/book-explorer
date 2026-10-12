@@ -3,6 +3,15 @@ import { cleanup } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, expect } from "vitest";
 import { server } from "./server.ts";
 
+// jsdom's <dialog> only reflects the open attribute. Without it, a closed
+// dialog is hidden and an open one visible, as in a browser.
+HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+  this.open = true;
+};
+HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
+  this.open = false;
+};
+
 // MSW's "error" strategy only makes fetch reject, which the app shows as an
 // ordinary error state, so unhandled requests are collected and fail the test.
 const unhandledRequests: string[] = [];

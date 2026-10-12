@@ -275,7 +275,7 @@ A note belongs to one reader and one book.
 
 **Handled**
 
-- **Note deleted in another tab, then edited here:** the reader is told the note no longer exists, and the notes list refreshes.
+- **Note deleted in another tab, then edited or deleted here:** the reader is told the note no longer exists, and the notes list refreshes.
 - **Logout, or a different reader's login, in another tab:** this tab notices a logout on its next request that needs login (which fails) or when it regains focus and re-checks the session; it notices a different reader's login only on that re-check. It then switches to the logged-out state, or to the new reader, and clears the previous reader's notes and personalized results. An open draft is kept after a logout elsewhere, as after expiry (AC-N12), and discarded once a reader is detected as logged in (AC-A8).
 - **Authentication expires while writing or editing a note:** handled as in J9 and AC-N12.
 - **Visitor opens a link that has "Books with my notes" turned on** (shared by someone else, or saved before logging out): the app removes `has_notes=true` and shows the public catalog without the control (AC-S3).

@@ -3,6 +3,7 @@ import { ApiError } from "../api/client.ts";
 import ErrorState from "../components/ErrorState.tsx";
 import LoadingState from "../components/LoadingState.tsx";
 import NotFound from "../components/NotFound.tsx";
+import NotesSection from "../notes/NotesSection.tsx";
 import styles from "./BookDetailPage.module.scss";
 import { parsePositiveInteger } from "./parsePositiveInteger.ts";
 import { useBook } from "./queries.ts";
@@ -18,7 +19,7 @@ export default function BookDetailPage() {
 }
 
 function BookDetail({ id }: { id: number }) {
-  const { data: book, error, isPending, isError, refetch } = useBook(id);
+  const { data: book, error, isError, refetch } = useBook(id);
   const listSearch = useListSearch();
 
   if (isError && error instanceof ApiError && error.status === 404) {
@@ -26,32 +27,37 @@ function BookDetail({ id }: { id: number }) {
   }
 
   let content;
-  if (isPending) {
-    content = <LoadingState label="Loading book…" />;
-  } else if (isError) {
-    content = (
+  // A failed background refetch keeps the book on screen, and with it any
+  // open note form.
+  if (book === undefined) {
+    content = isError ? (
       <ErrorState
         message="The book couldn't be loaded."
         onRetry={() => void refetch()}
       />
+    ) : (
+      <LoadingState label="Loading book…" />
     );
   } else {
     content = (
-      <article className={styles.book}>
-        <h1 className={styles.title}>{book.title}</h1>
-        <p className={styles.author}>by {book.author.name}</p>
-        <dl className={styles.facts}>
-          <div>
-            <dt>Published</dt>
-            <dd>{book.publication_year}</dd>
-          </div>
-          <div>
-            <dt>Genre</dt>
-            <dd>{book.genre.name}</dd>
-          </div>
-        </dl>
-        <p className={styles.description}>{book.description}</p>
-      </article>
+      <>
+        <article className={styles.book}>
+          <h1 className={styles.title}>{book.title}</h1>
+          <p className={styles.author}>by {book.author.name}</p>
+          <dl className={styles.facts}>
+            <div>
+              <dt>Published</dt>
+              <dd>{book.publication_year}</dd>
+            </div>
+            <div>
+              <dt>Genre</dt>
+              <dd>{book.genre.name}</dd>
+            </div>
+          </dl>
+          <p className={styles.description}>{book.description}</p>
+        </article>
+        <NotesSection bookId={id} />
+      </>
     );
   }
 

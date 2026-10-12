@@ -12,6 +12,7 @@ import { createQueryClient } from "../api/queryClient.ts";
 import { server } from "../test/server.ts";
 import {
   changeSession,
+  draftsKey,
   privateQueryOptions,
   sessionKey,
   sessionQuery,
@@ -111,6 +112,73 @@ test("a re-check that finds the same reader keeps the private entries", async ()
   expect(checks).toHaveLength(1);
   expect(client.getQueryData(sessionKey)).toEqual(alice);
   expect(privateEntries(client)).toHaveLength(1);
+});
+
+function recheck(client: QueryClient, user: User | null) {
+  serveSession(user);
+  return client.refetchQueries({ queryKey: sessionKey });
+}
+
+interface DraftCase {
+  change: string;
+  from?: User | null;
+  run: (client: QueryClient) => unknown;
+}
+
+test.each<DraftCase>([
+  {
+    change: "a login (nobody → alice)",
+    from: null,
+    run: (client: QueryClient) => changeSession(client, alice),
+  },
+  {
+    change: "a logout in this tab",
+    from: alice,
+    run: (client: QueryClient) =>
+      changeSession(client, null, { loggedOutHere: true }),
+  },
+  {
+    change: "a re-check that finds bob after alice",
+    from: alice,
+    run: (client: QueryClient) => recheck(client, bob),
+  },
+  {
+    change: "a re-check that finds alice after her session ended",
+    from: alice,
+    run: (client: QueryClient) => {
+      changeSession(client, null);
+      return recheck(client, alice);
+    },
+  },
+])("$change discards note drafts", async ({ from = alice, run }) => {
+  const client = await startSession(from);
+  const before = client.getQueryData<number>(draftsKey) ?? 0;
+
+  await run(client);
+
+  expect(client.getQueryData(draftsKey)).toBe(before + 1);
+});
+
+test.each<DraftCase>([
+  {
+    change: "a 401",
+    run: (client: QueryClient) => changeSession(client, null),
+  },
+  {
+    change: "a re-check that finds nobody",
+    run: (client: QueryClient) => recheck(client, null),
+  },
+  {
+    change: "a re-check that finds the same reader",
+    run: (client: QueryClient) => recheck(client, alice),
+  },
+])("$change keeps note drafts", async ({ run }) => {
+  const client = await startSession(alice);
+  const before = client.getQueryData<number>(draftsKey);
+
+  await run(client);
+
+  expect(client.getQueryData(draftsKey)).toBe(before);
 });
 
 test.each([
