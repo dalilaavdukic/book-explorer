@@ -1,6 +1,6 @@
 # Book Explorer: Product Specification
 
-*Living document, last updated 2026-10-11 (Phase 2). Requirements source:* `Development_Take-Home_Assignment.md`*. Technical design:* `docs/architecture.md`*.*
+*Living document, last updated 2026-10-12 (Phase 7: AC-X2 built, AC-X1 not built). Requirements source:* `Development_Take-Home_Assignment.md`*. Technical design:* `docs/architecture.md`*.*
 
 ## 1. Overview
 
@@ -51,8 +51,8 @@ Approved decisions that interpret or go beyond the assignment. They stay fixed u
 
 **Enhancements** (built only after the core is complete and verified)
 
-- Each reader sees their own note count per book on the list.
-- The author name on the detail page links to the list filtered by that author.
+- Each reader sees their own note count per book on the list. *Not built* (decided 2026-10-12).
+- The author name on the detail page links to the list filtered by that author. *Built.*
 
 **Out of scope**
 
@@ -267,6 +267,8 @@ A note belongs to one reader and one book.
 | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | AC-X1 | Each book in the list shows the logged-in reader's own note count for it. Visitors see no counts. The counts are loaded efficiently, not with one query per book. |
 | AC-X2 | The author name on a book's detail page opens the list filtered by that author.                                                                                   |
+
+AC-X2 was built in Phase 7. AC-X1 wasn't (decided 2026-10-12).
 
 
 

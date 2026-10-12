@@ -1,6 +1,6 @@
 # Book Explorer: Architecture
 
-*Living document, last updated 2026-10-12 (Phase 6). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
+*Living document, last updated 2026-10-12 (Phase 7, the finished app). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
 
 ## 1. Purpose and status
 
@@ -61,7 +61,8 @@ Two decisions deliberately depart from the assignment's wording or from common d
 ```
 backend/
 ├── manage.py, requirements.txt, requirements-dev.txt, ruff.toml
-├── config/     settings.py, urls.py, wsgi.py, asgi.py
+├── config/     settings.py, urls.py, logging.py, pagination.py, parsers.py,
+│               schema.py, views.py, wsgi.py, asgi.py
 ├── accounts/   User model, auth endpoints, session authentication class,
 │               demo-user command, admin registration
 ├── catalog/    Author/Genre/Book models, schema and seed migrations,
@@ -70,6 +71,11 @@ backend/
 ```
 
 - **Settings.** There is a single `settings.py`. `SECRET_KEY` and `DEBUG` come from environment variables, with local-development defaults; the README warns that those defaults are for development only.
+- **Logging.** `LOGGING` writes to the console (stderr) whether `DEBUG` is on or off. Django's default writes there only with `DEBUG` on, and otherwise emails `ADMINS`, which is empty, so an unexpected error would leave no trace.
+  - Each record names its logger and level. One about a request also gets its method and user (`[GET, user 3]`, `[GET, anonymous]`) from a filter in `config/logging.py`. Django already adds the path and, for a 500, the traceback.
+  - `django.request` logs at `ERROR`: crashes are logged, and the `WARNING` Django writes for every 4xx isn't. runserver's own request lines already show every status in development, and the test suite would otherwise print one line per expected 400, 401 and 404.
+  - Request bodies, query strings in error records, and cookies are never logged, so passwords, note text, session ids and CSRF tokens stay out of the log.
+  - **Requests Django refuses as suspicious** (a `Host` outside `ALLOWED_HOSTS`, a body over 2.5 MB, more than 1,000 fields) are logged by `django.security` at `ERROR` with a traceback, as Django intends, and answered with a JSON 400 (§7.3). They're rare locally; a deployment facing scanners would tune this logger (§10).
 - **DRF defaults.**
   - Authentication uses the custom session class (§6.5).
   - The default permission is `IsAuthenticated`, and catalog views explicitly allow public access (§6.6).
@@ -295,11 +301,19 @@ This gives the frontend one rule: **any 401 means the reader is logged out** (§
 | 403 | CSRF check failed |
 | 404 | Doesn't exist or isn't yours; unknown book or author; page out of range |
 | 405 | Method not supported (e.g. PUT on a note) |
-| 500 | Never caused by anything the client sends (AC-S8) |
+| 415 | A request body that isn't JSON (a form, multipart or plain text) |
+| 500 | Never caused by anything the client sends (AC-S8). The one exception is in debug mode: with `DEBUG` on, more than 1,000 query parameters make Django's debug page fail, and the development server answers a plain-text 500. |
 
 Errors use DRF's standard shapes:
 - **General errors:** `{"detail": "Not found."}`
 - **Validation errors:** one list of messages per field, e.g. `{"page": ["Ensure this value is less than or equal to 10000."]}`
+
+Every `/api/` error is JSON in these shapes, including those no DRF view answers:
+- **A path no route matches**, including an id that isn't a number, gets `{"detail": "Not found."}` from a catch-all route. API URLs end in a slash, so one without it gets this 404 rather than a redirect, which would turn a POST into a GET.
+- **A request Django refuses as suspicious** (a `Host` outside `ALLOWED_HOSTS`, a body over 2.5 MB, more than 1,000 fields) gets `{"detail": "Bad request."}`.
+- **An unexpected error** gets `{"detail": "A server error occurred."}`, and is logged with its traceback (§4).
+
+The last two come from `handler400` and `handler500`, which Django uses only with `DEBUG` off; with it on, it shows its debug page. Other paths, such as the admin, keep Django's own pages.
 
 The frontend shows field errors next to the matching form fields (AC-N3). A custom error envelope was rejected: it would be extra code and tests with little benefit for a single client.
 
@@ -393,7 +407,7 @@ Pagination is chosen per endpoint, not set globally:
   - year → title → id
   - In a descending sort only the chosen field is reversed: ties are still broken by title A–Z, then id. "Year, newest first" lists 1985 as *Blood Meridian*, *Love in the Time of Cholera*, *The Handmaid's Tale*.
 - **Notes** are ordered newest first by `created_at`, then by id (also descending), so notes saved in the same instant keep a fixed order and paging never repeats or skips one (AC-N13).
-- **Note counts** (AC-X1, an enhancement) are calculated in the same list query, never one query per book.
+- **Note counts** (AC-X1, an enhancement) weren't built (decided 2026-10-12). Had they been, they would be calculated in the same list query, never one query per book.
 
 ### 7.7 OpenAPI schema and API docs
 
@@ -408,7 +422,9 @@ Pagination is chosen per endpoint, not set globally:
   - The repeated `genre` parameter is documented as an array of ids (`style: form`, `explode: true`). openapi-typescript turns it into a number array, and `URLSearchParams.append` sends it as repeated parameters.
   - Because pagination is set per view (§7.4), the book and notes lists are documented with the paginated envelope, and author suggestions and genres as plain arrays.
   - The author `search` parameter and the author detail endpoint are documented like the others.
-- **Some views need annotations.** drf-spectacular can't fully work out a few hand-written pieces, so they are annotated: the auth endpoints, the custom session authentication class, the author `limit` parameter (validated in the view rather than a FilterSet), and the documented 401 and 404 responses.
+  - **Every error response an operation can give is documented** (§7.3), with what causes it: 401 and 403 as `Detail` (`{"detail": …}`), 404 as `Detail`, and a 400 for query parameters as `ValidationError` (a list of messages per field). A 400 for a request body is `BadRequest`, either of the two, because a body that isn't JSON gets `{"detail": …}`. 415, the JSON 404 for unknown paths, and the 400 for requests Django refuses as suspicious (§7.3) aren't repeated on every operation.
+  - The bounds are in the schema too: `page_size` from 1 to 100, and `search` up to 100 characters.
+- **Some views need annotations.** drf-spectacular can't fully work out a few hand-written pieces, so they are annotated: the auth endpoints, the custom session authentication class, the author `limit` parameter (validated in the view rather than a FilterSet), the `search` length (django-filter's `max_length` doesn't reach the schema), the `page_size` bounds, and the error responses. The error components and helpers live in `config/schema.py`.
 
 ## 8. Frontend architecture
 
@@ -428,10 +444,17 @@ frontend/src/
 ├── notes/        NotesSection, NoteForm, NoteItem, query and mutation hooks
 ├── components/   shared: Layout and Header, Pagination (book list and
 │                 notes), LoadingState, ErrorState, EmptyState, NotFound,
-│                 icons.tsx (inline SVG icons)
+│                 ErrorBoundary and ErrorFallback, PageTitle, icons.tsx
+│                 (inline SVG icons)
 ├── styles/       _variables.scss, _mixins.scss, global.scss
-└── App.tsx, main.tsx
+└── App.tsx, main.tsx, errorReporting.ts
 ```
+
+**Where code goes:**
+- **Components:** one exported component per file, named after it, with its `.module.scss` beside it. Private sub-components used only by that component may live in its file. The one exception is `components/icons.tsx`, which exports the set of inline SVG icons.
+- **Hooks, helpers and types:** they live in their only user's file. Once two or more modules use one, it moves to its own file, or to the module of its concern, in the feature folder.
+- **Modules grouped by concern:** a feature's query keys and query hooks live together in `<feature>/queries.ts`. Each resource's API functions, and the types it takes from the generated schema, live in `api/<resource>.ts`. Session state lives in `auth/session.ts` (§8.5), and the list state in `books/listState.ts` (§8.7).
+- **Folders:** by feature (`auth`, `books`, `notes`), with shared UI in `components`, the API layer in `api`, styles in `styles` and test utilities in `test`. Tests sit beside the module they test.
 
 | Route | View |
 |---|---|
@@ -471,6 +494,11 @@ Each spec need below is met by TanStack Query rather than custom code:
 - **A query that failed with a 4xx isn't refetched when the tab regains focus.** A query without data shows its loading state again while it refetches, so a "not found" view would turn back into "Loading…" every time the reader returns to the tab. Every other query keeps TanStack's refetch on focus. The session query sets its own focus policy (§8.5).
 - **A view that has data keeps showing it when a background refetch fails.** The error state appears only when there's nothing to show, so a failed refetch on tab focus can't unmount the book page and an open note form with it. A 404 still shows "Book not found".
 
+**Unexpected errors.** They all go to one function, `reportUnexpectedError` in `errorReporting.ts`. It writes to the console, and it's where an error service would be called; deployment is out of scope. Three sources reach it:
+- **Render errors.** An error boundary around the routes, inside `Layout`'s `<main>`, replaces only the page with "Something went wrong on this page.", Reload and Back to the catalog, so the header stays usable. Any navigation clears it: the boundary resets when the location's key changes while it shows its fallback, which covers going back to the catalog from a list at the same path. A second boundary around `App`, in `main.tsx`, catches the rest, such as the header or startup; its link is a plain `<a>`, because the router may be what failed. React still needs a class component for a boundary, so no dependency is added.
+- **Request code.** The cache hooks report an error that is neither an `ApiError` nor a network error: a bug in a query or mutation function, which the view's Retry would otherwise hide. API errors aren't reported here; the server logs its own 5xx (§4).
+- **Everything else.** Listeners for `error` and `unhandledrejection` on `window`, added in `main.tsx` before the first render.
+
 Hand-written `useEffect` fetching was rejected because it would mean writing request cancellation, race protection, caching and refetching ourselves, all of which are easy to get wrong. React Router loaders were rejected because they have no cache, would make every search pause a navigation, and fit inline note editing poorly.
 
 ### 8.5 Authentication state, the 401 rule and private data
@@ -487,7 +515,7 @@ Hand-written `useEffect` fetching was rejected because it would mean writing req
 
 **Private data at authentication boundaries** (AC-A8)
 
-A response is *private* if it depends on who is logged in: a reader's notes, `has_notes` book lists and, if AC-X1 is built, every book list fetched by a logged-in reader, because it carries their note counts. Everything else is *public*: book lists for visitors, book detail, authors and genres.
+A response is *private* if it depends on who is logged in: a reader's notes, `has_notes` book lists and, had AC-X1 been built, every book list fetched by a logged-in reader, because it would carry their note counts. Everything else is *public*: book lists for visitors, book detail, authors and genres.
 
 - **Private query keys share one root and include the reader's id**, e.g. `['private', readerId, 'notes', bookId, page]`. The root lets one call find every private entry. The id means a result is only ever stored under the keys of the reader it was requested for, so the next reader's queries can't be answered from it.
 - **One function updates the session and, whenever the reader changes (including to or from nobody), runs the clean-up.** That covers logging out, logging in, any 401 (expiry, or logout in another tab), and a re-check that finds a different reader or none. The clean-up:
@@ -593,6 +621,13 @@ Rejected alternatives:
     - **accent on ink** (2.1:1): hence the amber focus ring in the header
   - Disabled controls are exempt (WCAG 1.4.3). They're shown at half opacity with a `not-allowed` cursor.
 - **Focus rings.** A 2px ring, offset 2px, on `:focus-visible`: teal everywhere, and amber inside the ink header. A ring is removed only where another replaces it. A book card's title link draws its ring on the `::after` that covers the card, so the ring goes round the whole card.
+- **Page titles** (WCAG 2.4.2). Each page renders its own `<title>` through `components/PageTitle.tsx`, as "<page> — Book Explorer": "Books", the book's title ("Loading book…" while it loads), "Log in", each not-found view after its heading, and "Something went wrong" from either error boundary's fallback (§8.4). React 19 places it in the document's head, ahead of `index.html`'s title, which stays the default until the app loads.
+- **Focus on navigation.** When a navigation changes the path (opening a book, Back to books, logging in, Back and Forward), `Layout` moves focus to the new page's `<h1>`, which has `tabIndex={-1}`, so a screen reader announces the page.
+  - **Not on the first load,** and not when only the search changes (filters, sort, page), which would pull focus from the control in use.
+  - **A page still loading** gets focus on its heading once the heading appears, unless the reader has moved focus meanwhile.
+  - **Without scrolling** (`preventScroll`). `focus()` scrolls its element into view by default, which on Back and Forward would undo the browser's scroll restoration that J1 relies on. A new page is already at the top.
+  - **A page change in a list** moves focus to that list's heading: "Books" for the book list, "Your notes" for a book's notes. While the next page loads, "Loading…" replaces the pager, so the focused Next or Previous button would disappear and focus would fall to the page. The notes heading is scrolled into view, since the pager sits at the bottom of a long list.
+  - **No ring on the heading.** `global.scss` removes the `:focus-visible` ring from a focused `h1` or `h2` with `tabindex="-1"`: it isn't a control, and a ring would make it look like one. The next Tab continues from it.
 - **Sticky header:**
   - The header is `position: sticky` and keeps one fixed height (3.5rem). It never wraps: the username shrinks with an ellipsis instead.
   - `scroll-padding-top` on `html` is the header's height plus 2rem. An element that takes focus or is scrolled to therefore stops below the header, with room for a card's padding and focus ring (WCAG 2.4.11, technique C43).
@@ -654,7 +689,7 @@ In priority order:
    - **Paging:** a sorted list with ties never repeats or skips a book across pages; `page_size` limits apply.
    - **Author suggestions:** partial, case-insensitive matches in `sort_name` order; only authors with books; the `limit` default and maximum; `GET /api/authors/{id}/` returns 404 for an unknown id.
    - **Bad input:** invalid values return 400 (including one unknown id among several `genre` values, and `limit=0` or `limit=21`), unknown parameter names are ignored, and an out-of-range page returns 404.
-5. **Query efficiency.** `assertNumQueries` shows the book list takes the same number of queries for 3 books as for 30, and does the same for note counts (AC-X1).
+5. **Query efficiency.** `assertNumQueries` shows the book list takes the same number of queries for 3 books as for 30, with and without `has_notes`, and the admin's delete page for a book the same for one note as for several. AC-X1's note counts would have had the same test; they weren't built.
 6. **Seed migration and demo users.**
    - The catalog exists after migrating, with the 100 seeded books.
    - One round-trip test adds a book outside the seed, by a seeded author, then rolls the seed back. It checks that only the seeded books were removed, that the added book and its author remain, and that the notes migrations were unapplied with it, so the notes table no longer exists (AC-M2). It then migrates forward again, which must reuse the kept author.
@@ -666,7 +701,7 @@ In priority order:
 
 ### 9.2 Frontend (Vitest, React Testing Library, MSW)
 
-There are about 10–20 targeted tests, aimed at behaviour that's easy to break and hard to notice by clicking around. MSW fakes the API at the network level, so the real API client, query cache and components all run in the tests.
+The suite has 168 tests, aimed at behaviour that's easy to break and hard to notice by clicking around. MSW fakes the API at the network level, so the real API client, query cache and components all run in the tests.
 
 - the API client: the CSRF header and how errors are mapped
 - the 401 rule, including an unsaved note form surviving session expiry and the private-data clean-up (AC-N12)
@@ -680,10 +715,12 @@ There are about 10–20 targeted tests, aimed at behaviour that's easy to break 
 - search debouncing (AC-S9), and the author selector: debounced suggestions, keyboard selection, and restoring a selected author from `?author=` through the author detail endpoint (AC-S10)
 - notes paging: creating a note returns to page 1, and deleting the only note on the last page moves to the previous page (AC-N13)
 - double-submit protection on note forms (AC-N2)
+- unexpected errors: the error boundaries, and the one function that reports errors (§8.4)
+- page titles, and focus moving to the page's heading on navigation (§8.8)
 
 ### 9.3 Manual acceptance checklist
 
-There are no automated browser end-to-end tests: they would need both servers and a test database running in CI. Instead, Phase 7 walks through every user journey and acceptance criterion against the running app with a written checklist. That includes the cross-tab cases of AC-A8, which need two real tabs. Claude Code carries out the walkthrough through Playwright MCP wherever possible, and by hand otherwise (implementation plan §4); no browser test code is committed.
+There are no automated browser end-to-end tests: they would need both servers and a test database running in CI. Instead, Phase 7 walks through every user journey and acceptance criterion against the running app with a written checklist. That includes the cross-tab cases of AC-A8, which need two real tabs. Claude Code carries out the walkthrough through Playwright MCP wherever possible, and by hand otherwise (implementation plan §4); no browser test code is committed. The results, with each criterion's method and evidence, are in `docs/acceptance-checklist.md`.
 
 ### 9.4 Code quality and CI
 
@@ -714,7 +751,7 @@ There are no automated browser end-to-end tests: they would need both servers an
 | A tab isn't told immediately about a login or logout in another tab | Until it notices (a 401, or the session re-check when it regains focus), it keeps showing its last state, including any open draft, and its requests run with whichever session the browser now holds | The server always answers for the browser's current session, so a stale tab can't reach data that session can't. Once it notices, the clean-up runs (§8.5). Cross-tab messaging (`BroadcastChannel`) would make it immediate, but isn't needed at this scale. |
 | The author combobox is built by hand | Its keyboard and screen-reader behaviour is ours to get right | One small component following the WAI-ARIA combobox pattern, with a keyboard test (§9.2); not worth an autocomplete dependency |
 | Generated types are only as accurate as the schema | A wrong annotation produces wrong types | Custom pieces are annotated deliberately; CI catches a stale schema, but not a wrong annotation |
-| No production hardening | Not deployable as is | Out of scope. Deployment would need HTTPS, `Secure` cookies, `DEBUG` off, a real `SECRET_KEY`, `ALLOWED_HOSTS`, a reverse proxy serving the SPA build, and rate limiting. |
+| No production hardening | Not deployable as is | Out of scope. Deployment would need HTTPS with HSTS, `Secure` cookies, `DEBUG` off, a real `SECRET_KEY`, `ALLOWED_HOSTS`, `STATIC_ROOT` and `collectstatic` for the admin's and Swagger UI's files, a reverse proxy serving the SPA build and those files, a Content-Security-Policy, rate limiting, a periodic `clearsessions` to remove expired sessions, and `django.security` logging tuned for scanner traffic (§4). |
 
 **Settled during scaffolding (Phase 1):**
 - **Versions.**
@@ -790,3 +827,15 @@ There are no automated browser end-to-end tests: they would need both servers an
   - `joinSort` builds `-${field}`, which compiles only while the API has a descending sort for every field.
   - Trade-off: the button's name changes with each click, between "Ascending" and "Descending". Some screen readers don't announce a focused button's new name, so a screen-reader user may hear the new order only when the button is read again.
 - **Favicon:** `public/book-explorer.svg`, under a new name rather than Vite's `favicon.svg`. Browsers keep a favicon per site and don't reliably refetch one whose URL hasn't changed, so anyone who had run another Vite app on `localhost:5173` would keep seeing Vite's icon.
+
+**Settled during final integration (Phase 7):**
+- **Logging** (§4). The request filter sits on the console handler, not on a logger, because a logger's filters only see records created on that logger, not those that propagate to it from `django.request`. `django.server` is declared again as Django's default declares it, so runserver's request lines keep their own format. The filter never raises: a filter's exception isn't caught by the logging module, and loading the user fails when the database does.
+- **JSON errors** (§7.3). The catch-all is a plain Django view, so it stays out of the schema, and it's exempt from Django's CSRF middleware. DRF exempts its own views and checks CSRF itself, in JSON; without the exemption, a write to an unknown path would get the middleware's HTML 403. It reads and changes nothing.
+- **Error boundaries** (§8.4). The fallback is one component, `ErrorFallback`, given the link that suits each boundary. The reporting function is named `reportUnexpectedError`, not `reportError`, so a module that forgets to import it fails to compile instead of calling the browser's global `reportError`.
+- **JSON parser.** `config.parsers.JSONParser` extends DRF's to turn the `RecursionError` that Python's decoder raises for deeply nested JSON into a 400 parse error. DRF catches only `ValueError`, so a body of about 100 KB of `[` was a 500 on every write, login included.
+- **A stale edit can't bring a note back.** `Model.save()` falls back to an INSERT when its UPDATE matches no row, so a PATCH that loaded a note just before a DELETE committed re-created it. `Note.save` now raises `Note.DoesNotExist` when the stored row is gone, which the detail view answers with the same 404 as a missing note, and saves existing notes with `force_update`. A deletion in the instant between that check and the UPDATE then fails the request with a logged 500 instead of re-inserting the note.
+- **Note fields take only their JSON type.** DRF's `CharField` stores a number as text, and its `IntegerField` accepts `"5"`, `" 5 "` and `1.0`. `NoteSerializer` maps the model's text and integer fields to subclasses that accept only a JSON string and a JSON integer, so those get a 400 like any other invalid value (AC-N3). The schema is unchanged.
+- **Documented errors** (§7.7). `ValidationError`'s shape (`additionalProperties`) can't be expressed by a serializer, so a small drf-spectacular extension describes it. `Detail` moved from `notes` to `config/schema.py`, since every app uses it. The search filters declare their schema through `SearchFilter`, which sets the limit and the schema together.
+- **Coverage scope.** `backend/.coveragerc` leaves out the tests, the migrations, `manage.py` and the WSGI and ASGI entry points, so the README's figure measures the application code only (§9.1).
+- **AC-X2:** the author's name on a book's page is a plain `<Link>` to `/?author=<id>`, styled by the global link rule. The author selector already restores the name from the id (§8.7). AC-X1 wasn't built (decided 2026-10-12).
+- **Acceptance record.** `docs/acceptance-checklist.md` gives each criterion's method, evidence and result. The core it verified is tagged `v1.0-core`; AC-X2 was verified after it.

@@ -5,6 +5,7 @@ from django.db.models import Exists, OuterRef, Q
 from django.db.models.functions import Lower
 from django_filters import fields
 from django_filters import rest_framework as filters
+from drf_spectacular.utils import extend_schema_field
 from rest_framework.exceptions import NotAuthenticated
 
 from notes.models import Note
@@ -19,6 +20,20 @@ BOOK_ORDERINGS = {
     "year": ("publication_year", Lower("title"), "id"),
     "-year": ("-publication_year", Lower("title"), "id"),
 }
+
+
+SEARCH_MAX_LENGTH = 100
+
+
+class SearchFilter(filters.CharFilter):
+    def __init__(self, *args, help_text, **kwargs):
+        super().__init__(
+            *args, max_length=SEARCH_MAX_LENGTH, help_text=help_text, **kwargs
+        )
+        # drf-spectacular's django-filter support doesn't carry max_length into
+        # the schema. With this override it takes the description from it too.
+        schema = {"type": "string", "maxLength": SEARCH_MAX_LENGTH}
+        extend_schema_field({**schema, "description": help_text})(self)
 
 
 class IdMultipleChoiceField(fields.ModelMultipleChoiceField):
@@ -41,17 +56,15 @@ class IdMultipleChoiceFilter(filters.ModelMultipleChoiceFilter):
 
 
 class AuthorFilter(filters.FilterSet):
-    search = filters.CharFilter(
+    search = SearchFilter(
         field_name="name",
         lookup_expr="icontains",
-        max_length=100,
         help_text="Text the author's name contains.",
     )
 
 
 class BookFilter(filters.FilterSet):
-    search = filters.CharFilter(
-        max_length=100,
+    search = SearchFilter(
         method="filter_search",
         help_text="Words that must all appear in the title or the author's name.",
     )

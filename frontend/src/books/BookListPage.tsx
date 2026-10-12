@@ -5,6 +5,7 @@ import EmptyState from "../components/EmptyState.tsx";
 import ErrorState from "../components/ErrorState.tsx";
 import LoadingState from "../components/LoadingState.tsx";
 import NotFound from "../components/NotFound.tsx";
+import PageTitle from "../components/PageTitle.tsx";
 import Pagination from "../components/Pagination.tsx";
 import BookFilters from "./BookFilters.tsx";
 import styles from "./BookListPage.module.scss";
@@ -38,6 +39,7 @@ function BookResults({ params, listUrl }: BookResultsProps) {
   const { data, error, isPending, isError, refetch } = useBookList(params);
   const [searchBoxKey, setSearchBoxKey] = useState(0);
   const searchBoxRef = useRef<HTMLInputElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
   // Also empties the search box and cancels its pending write, even when the
   // URL has no search yet.
@@ -53,6 +55,13 @@ function BookResults({ params, listUrl }: BookResultsProps) {
       searchBoxRef.current?.focus();
     }
   }, [searchBoxKey]);
+
+  // "Loading books…" replaces the pager while the page loads, so the button
+  // would take focus with it.
+  const changePage = (page: number) => {
+    listUrl.setPage(page);
+    headingRef.current?.focus();
+  };
 
   if (isError && error instanceof ApiError) {
     if (error.status === 400) {
@@ -103,7 +112,7 @@ function BookResults({ params, listUrl }: BookResultsProps) {
         <Pagination
           page={params.page}
           pageCount={Math.ceil(data.count / BOOKS_PAGE_SIZE)}
-          onPageChange={listUrl.setPage}
+          onPageChange={changePage}
         />
       </>
     );
@@ -111,7 +120,10 @@ function BookResults({ params, listUrl }: BookResultsProps) {
 
   return (
     <>
-      <h1>Books</h1>
+      <PageTitle name="Books" />
+      <h1 ref={headingRef} tabIndex={-1}>
+        Books
+      </h1>
       <BookFilters
         params={params}
         listUrl={listUrl}

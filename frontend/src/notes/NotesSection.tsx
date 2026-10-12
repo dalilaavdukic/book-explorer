@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ApiError } from "../api/client.ts";
 import type { Note, NoteRequest } from "../api/notes.ts";
@@ -52,6 +52,7 @@ function BookNotes({ bookId }: { bookId: number }) {
   const { user } = useAuth();
   const location = useLocation();
   const headingId = useId();
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const [page, setPage] = useState(1);
   const [draft, setDraft] = useState(emptyDraft);
   const [edit, setEdit] = useState<Edit | null>(null);
@@ -94,6 +95,14 @@ function BookNotes({ bookId }: { bookId: number }) {
   // "Invalid page.": notes deleted elsewhere emptied this page (arch §8.7).
   if (page !== 1 && hasStatus(notes.error, 404)) {
     setPage(1);
+  }
+
+  // "Loading notes…" replaces the pager while the page loads, so the button
+  // would take focus with it. The heading stays, and focusing it brings the
+  // new page into view.
+  function changePage(next: number) {
+    setPage(next);
+    headingRef.current?.focus();
   }
 
   function handleCreate(request: NoteRequest) {
@@ -235,7 +244,7 @@ function BookNotes({ bookId }: { bookId: number }) {
         <Pagination
           page={page}
           pageCount={Math.ceil(notes.data.count / NOTES_PAGE_SIZE)}
-          onPageChange={setPage}
+          onPageChange={changePage}
         />
       </>
     );
@@ -253,7 +262,12 @@ function BookNotes({ bookId }: { bookId: number }) {
       aria-label={user ? undefined : "Your notes"}
     >
       {user && (
-        <h2 id={headingId} className={styles.heading}>
+        <h2
+          id={headingId}
+          ref={headingRef}
+          tabIndex={-1}
+          className={styles.heading}
+        >
           Your notes
         </h2>
       )}

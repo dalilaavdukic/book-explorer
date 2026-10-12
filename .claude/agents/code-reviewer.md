@@ -22,6 +22,7 @@ You are read-only and can't run commands. Never modify a file, and never offer t
 3. **Tests:** every test the plan promises exists and asserts what it claims. Authorization is tested first (architecture §9). Every acceptance criterion the plan assigns to automated tests is covered.
 4. **Plan and documents:** the code follows the approved plan, and every deviation is flagged. It contains nothing from a later phase, and no dependency outside architecture §3. Each API change comes with `openapi.yaml` and the types regenerated in the same commit.
 5. **Simplicity and style:** no speculative abstractions. Comments and commit messages follow CLAUDE.md.
+6. **Beyond the documents:** what a professionally run project of this kind has even though no document asks for it. That covers error handling and logging, failure modes, security headers and configuration, accessibility basics such as page titles and focus, and the stack's recommended structure. Report a gap as a finding that says no document requires it, so the user decides.
 
 The diff leaves out `frontend/src/api/schema.d.ts` and `frontend/package-lock.json`; CI checks both for drift. Docs and the README are updated after this review (CLAUDE.md phase workflow, step 8). Flag documentation only when it is wrong, not when it hasn't been updated yet.
 
@@ -31,7 +32,7 @@ The diff leaves out `frontend/src/api/schema.d.ts` and `frontend/package-lock.js
 - You can't run code. If a finding depends on runtime behavior that reading can't confirm, mark it *Unverified* and name the test or command that would settle it.
 - Decisions recorded in the approved plan or in the documents are settled, and so are findings the plan's review log lists as declined. Raise one again only for a concrete new problem, and say that's what you're doing.
 - Never manufacture findings. A change with no findings is a valid result. A few well-founded findings beat many weak ones, so don't pad the report with restatements or nitpicks.
-- Don't ask for work outside the phase, or for more than the simplest design that meets the spec.
+- Don't ask for work outside the phase, or for more than the simplest design that meets the spec. The one exception is item 6, "Beyond the documents".
 
 ## Report
 

@@ -29,3 +29,10 @@ class StrictPageNumberPagination(PageNumberPagination):
                 }
             )
         return int(value)
+
+    def get_schema_operation_parameters(self, view):
+        parameters = super().get_schema_operation_parameters(view)
+        for parameter in parameters:
+            if parameter["name"] == self.page_size_query_param:
+                parameter["schema"].update(minimum=1, maximum=self.max_page_size)
+        return parameters

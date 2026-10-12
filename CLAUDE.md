@@ -34,11 +34,12 @@ Every phase follows this loop:
 
 Phases 4 and 5 add a checkpoint inside step 4: build the backend and its tests, review them, fix and commit, then build the frontend. It isn't a separate phase and has no plan or approval of its own.
 
-**Commands.** Four project skills run the loop, and only the user starts them:
+**Commands.** Five project skills run the work, and only the user starts them:
 - `/plan-phase N`: steps 1–3. It writes the plan to `.claude/plans/phase-N.md`.
 - `/review-phase-plan N`: an independent review of the plan by the read-only `plan-reviewer` agent, before approval.
 - `/implement-phase N`: steps 4–9. It runs only if the plan's status line reads Approved. Re-running it resumes from the git state, including after compaction or in a new session.
 - `/review-phase-code N [backend]`: step 7, by the read-only `code-reviewer` agent. `backend` reviews the Phase 4/5 checkpoint.
+- `/assess-solution`: the Phase 7 assessment of the whole solution (implementation plan §5.7) by the read-only `solution-assessor` agent.
 
 Change a plan's status line to Approved only when the user explicitly approves the plan. Reviewer findings are proposals: show them to the user in full, apply only the ones the user approves, and record each round in the plan's review log.
 
@@ -53,11 +54,12 @@ Never say a test or check passed unless it ran and you saw its output. State wha
 ## Engineering guardrails
 
 - Prefer the simplest design that meets the spec: DRF generic views and viewsets, no service or repository layers, no speculative abstractions.
-- Build only the current phase. Work pulled into an earlier phase is exactly what plan §6 lists. The enhancements (AC-X1, AC-X2) wait for Phase 7, after the core is tagged.
+- Build only the current phase. Work pulled into an earlier phase is exactly what plan §6 lists. The enhancements wait for Phase 7, after the core is tagged: AC-X2 is built there, and AC-X1 isn't built (decided 2026-10-12).
 - Use only the libraries and tools approved in architecture §3, each added in the phase that first needs it. Any other dependency, service or infrastructure needs approval.
 - Authorization lives on the server (architecture §6.5, §6.6). Endpoints require login by default; public ones, such as the catalog, opt in and work without logging in. A logged-out request to a protected endpoint, or for personalized results (`has_notes=true`), gets 401; a failed CSRF check gets 403. A logged-in reader can list and create only their own notes on a book. Every notes query starts from the reader's own notes, so another reader's individual note returns 404 (AC-N6). A note's owner comes from the session and its book from the URL.
 - Private data in the browser (architecture §8.5, AC-A8): private query keys go under the reader's `private` root, and every change of reader goes through the single session-transition function. One reader must never see another's notes, personalized results or unsaved draft.
 - Add tests with each feature, prioritized as in architecture §9: authorization first.
+- Hold the work to how a professionally run project works, not only to the documents. Raise each gap, such as missing logging or error handling, as a decision with a recommendation.
 - An API change means regenerating `openapi.yaml` and the TypeScript types and committing them with the change; regenerating again afterwards must produce no diff. Change them only through the generators, and never write API types by hand.
 
 ## Working with the user

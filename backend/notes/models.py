@@ -36,13 +36,20 @@ class Note(models.Model):
         ]
 
     def __str__(self):
-        return f"Note {self.pk} by {self.user} on {self.book}"
+        # No related lookups: the admin's delete pages list a book's or a
+        # reader's notes by this, which would otherwise be a query per note.
+        return f"Note {self.pk}"
 
     def save(self, *args, **kwargs):
-        # Compared with the stored row, not a snapshot taken on load, which would
-        # go stale after refresh_from_db().
         if not self._state.adding:
+            # Compared with the stored row, not a snapshot taken on load, which
+            # would go stale after refresh_from_db().
             stored = Note.objects.filter(pk=self.pk).values("body", "page").first()
-            if stored and (stored["body"], stored["page"]) != (self.body, self.page):
+            # Deleted since it was loaded: Django would insert it again.
+            if stored is None:
+                raise Note.DoesNotExist("The note was deleted.")
+            if (stored["body"], stored["page"]) != (self.body, self.page):
                 self.edited_at = timezone.now()
+            # A deletion after the check above then fails the save instead.
+            kwargs["force_update"] = True
         super().save(*args, **kwargs)

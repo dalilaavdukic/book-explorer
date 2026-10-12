@@ -321,6 +321,17 @@ test("21 notes show 20 on page 1 and 1 on page 2", async () => {
   expect(noteItems()[0]).toHaveTextContent("Note 1.");
 });
 
+test("a page change moves focus to the notes heading", async () => {
+  await openAsAlice(makeNotes(21));
+  const heading = screen.getByRole("heading", { name: "Your notes" });
+  expect(heading).not.toHaveFocus();
+
+  screen.getByRole("button", { name: "Next" }).focus();
+  await goToPage(2);
+
+  expect(heading).toHaveFocus();
+});
+
 test("a page that no longer exists returns the section to page 1", async () => {
   const api = await openAsAlice(makeNotes(21));
   // Deleted in another tab: page 2 is gone.

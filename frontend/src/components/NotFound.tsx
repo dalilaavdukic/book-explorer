@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import styles from "./NotFound.module.scss";
+import PageTitle from "./PageTitle.tsx";
 
 interface NotFoundProps {
   title: string;
@@ -14,7 +15,8 @@ export default function NotFound({
 }: NotFoundProps) {
   return (
     <section className={styles.notFound}>
-      <h1>{title}</h1>
+      <PageTitle name={title} />
+      <h1 tabIndex={-1}>{title}</h1>
       <p>
         <Link to={to} className={styles.link}>
           {linkLabel}

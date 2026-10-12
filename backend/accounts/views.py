@@ -7,6 +7,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from config.schema import CSRF_FAILED, invalid_body
+
 from .authentication import SessionAuthentication
 from .serializers import LoginSerializer, SessionSerializer
 
@@ -34,7 +36,16 @@ class SessionView(APIView):
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(request=LoginSerializer, responses=SessionSerializer)
+    @extend_schema(
+        request=LoginSerializer,
+        responses={
+            status.HTTP_200_OK: SessionSerializer,
+            status.HTTP_400_BAD_REQUEST: invalid_body(
+                "Wrong credentials, a missing field, or a body that isn't JSON."
+            ),
+            status.HTTP_403_FORBIDDEN: CSRF_FAILED,
+        },
+    )
     def post(self, request):
         enforce_csrf(request)
         serializer = LoginSerializer(data=request.data, context={"request": request})
@@ -47,7 +58,13 @@ class LoginView(APIView):
 class LogoutView(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(request=None, responses={status.HTTP_204_NO_CONTENT: None})
+    @extend_schema(
+        request=None,
+        responses={
+            status.HTTP_204_NO_CONTENT: None,
+            status.HTTP_403_FORBIDDEN: CSRF_FAILED,
+        },
+    )
     def post(self, request):
         enforce_csrf(request)
         logout(request)

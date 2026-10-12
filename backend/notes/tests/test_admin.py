@@ -1,4 +1,6 @@
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from accounts.models import User
@@ -36,6 +38,26 @@ class NoteAdminTests(TestCase):
         self.assertContains(response, "Cannot delete book")
         self.assertTrue(Book.objects.filter(pk=self.book.pk).exists())
         self.assertTrue(Note.objects.filter(pk=self.note.pk).exists())
+
+    def test_delete_pages_run_the_same_queries_for_one_note_or_many(self):
+        urls = [
+            reverse("admin:catalog_book_delete", args=[self.book.pk]),
+            reverse("admin:accounts_user_delete", args=[self.alice.pk]),
+        ]
+
+        def query_counts():
+            counts = []
+            for url in urls:
+                with CaptureQueriesContext(connection) as queries:
+                    self.client.get(url)
+                counts.append(len(queries))
+            return counts
+
+        with_one_note = query_counts()
+        for _ in range(4):
+            Note.objects.create(user=self.alice, book=self.book, body="Another.")
+
+        self.assertEqual(query_counts(), with_one_note)
 
     def test_changelist_finds_a_note_by_its_text(self):
         Note.objects.create(user=self.bob, book=self.book, body="Something else.")

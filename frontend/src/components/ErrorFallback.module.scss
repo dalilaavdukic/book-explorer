@@ -1,0 +1,20 @@
+@use "../styles/variables" as *;
+@use "../styles/mixins" as *;
+
+.error {
+  @include notice($color-danger-tint, $color-danger);
+  margin: $space-8 0;
+}
+
+.message {
+  margin: 0 0 $space-3;
+  font-weight: 600;
+  color: $color-danger;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-4;
+  align-items: center;
+}

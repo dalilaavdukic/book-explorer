@@ -1,5 +1,7 @@
-from django.db import IntegrityError, transaction
-from django.db.models import ProtectedError
+from unittest import mock
+
+from django.db import DatabaseError, IntegrityError, transaction
+from django.db.models import ProtectedError, QuerySet
 from django.test import TestCase
 
 from accounts.models import User
@@ -80,3 +82,30 @@ class NoteDeleteRuleTests(NoteTestCase):
         self.alice.delete()
 
         self.assertEqual(list(Note.objects.all()), [bobs_note])
+
+
+class NoteDeletedWhileLoadedTests(NoteTestCase):
+    def test_saving_a_deleted_note_raises_instead_of_inserting_it_again(self):
+        note = self.create_note()
+        Note.objects.filter(pk=note.pk).delete()
+        note.body = "Changed."
+
+        with self.assertRaises(Note.DoesNotExist):
+            note.save()
+
+        self.assertFalse(Note.objects.filter(pk=note.pk).exists())
+
+    def test_deletion_after_the_check_fails_the_save_instead_of_inserting(self):
+        note = self.create_note()
+        Note.objects.filter(pk=note.pk).delete()
+        note.body = "Changed."
+        stored_before_deletion = {"body": "A note.", "page": 12}
+
+        with (
+            mock.patch.object(QuerySet, "first", return_value=stored_before_deletion),
+            self.assertRaises(DatabaseError),
+            transaction.atomic(),
+        ):
+            note.save()
+
+        self.assertFalse(Note.objects.filter(pk=note.pk).exists())

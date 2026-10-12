@@ -89,6 +89,54 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Django's default only writes to the console with DEBUG on, so with it off an
+# unexpected error would leave no trace. Request bodies and cookies are never
+# logged, which keeps passwords, note text and session ids out.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {
+        "request_context": {"()": "config.logging.RequestContextFilter"},
+    },
+    "formatters": {
+        "console": {
+            "format": "{asctime} {levelname} {name} {message}{request_context}",
+            "style": "{",
+        },
+        "django.server": {
+            "()": "django.utils.log.ServerFormatter",
+            "format": "[{server_time}] {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        # The filter sits on the handler: a logger's filters only see records
+        # created on that logger, not those propagated from django.request.
+        "console": {
+            "class": "logging.StreamHandler",
+            "filters": ["request_context"],
+            "formatter": "console",
+        },
+        "django.server": {
+            "class": "logging.StreamHandler",
+            "formatter": "django.server",
+        },
+    },
+    "loggers": {
+        "django": {"handlers": ["console"], "level": "INFO"},
+        # Errors only: runserver already shows every status, and a WARNING for
+        # each 4xx would flood the test output.
+        "django.request": {"level": "ERROR"},
+        # Redeclared as in Django's default, or its request lines would lose
+        # their handler and go through the console format.
+        "django.server": {
+            "handlers": ["django.server"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "accounts.authentication.SessionAuthentication",
@@ -98,7 +146,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_PARSER_CLASSES": [
-        "rest_framework.parsers.JSONParser",
+        "config.parsers.JSONParser",
     ],
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
