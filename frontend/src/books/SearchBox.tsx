@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useState } from "react";
+import { type Ref, useEffect, useEffectEvent, useState } from "react";
 
 const PAUSE_MS = 300;
 
@@ -6,6 +6,7 @@ interface SearchBoxProps {
   /** The URL's search. */
   search: string;
   onSearch: (search: string) => void;
+  ref?: Ref<HTMLInputElement>;
 }
 
 interface Box {
@@ -23,7 +24,7 @@ interface Box {
  * (arch §8.7). It's written after a pause, and replaced whenever the URL's
  * search changes for another reason (Back, Forward, a link).
  */
-export default function SearchBox({ search, onSearch }: SearchBoxProps) {
+export default function SearchBox({ search, onSearch, ref }: SearchBoxProps) {
   const [box, setBox] = useState<Box>({
     text: search,
     pending: false,
@@ -62,6 +63,7 @@ export default function SearchBox({ search, onSearch }: SearchBoxProps) {
     <label>
       Search
       <input
+        ref={ref}
         type="search"
         value={box.text}
         maxLength={100}

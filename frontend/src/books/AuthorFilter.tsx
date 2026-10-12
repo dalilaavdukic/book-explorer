@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { type KeyboardEvent, useId, useState } from "react";
+import { type KeyboardEvent, useId, useRef, useState } from "react";
 import type { Author } from "../api/authors.ts";
 import styles from "./AuthorFilter.module.scss";
 import { authorKeys, useAuthor, useAuthorSuggestions } from "./queries.ts";
@@ -25,6 +25,7 @@ export default function AuthorFilter({ author, onChange }: AuthorFilterProps) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [seenAuthor, setSeenAuthor] = useState(author);
+  const inputRef = useRef<HTMLInputElement>(null);
   const id = useId();
   const listId = `${id}-list`;
 
@@ -111,6 +112,7 @@ export default function AuthorFilter({ author, onChange }: AuthorFilterProps) {
       </label>
       <div className={styles.field}>
         <input
+          ref={inputRef}
           id={`${id}-input`}
           type="text"
           role="combobox"
@@ -142,6 +144,8 @@ export default function AuthorFilter({ author, onChange }: AuthorFilterProps) {
             onClick={() => {
               setText(null);
               onChange(null);
+              // This button goes away with the author.
+              inputRef.current?.focus();
             }}
           >
             Clear

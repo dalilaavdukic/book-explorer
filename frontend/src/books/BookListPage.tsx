@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ApiError } from "../api/client.ts";
 import EmptyState from "../components/EmptyState.tsx";
@@ -37,6 +37,7 @@ interface BookResultsProps {
 function BookResults({ params, listUrl }: BookResultsProps) {
   const { data, error, isPending, isError, refetch } = useBookList(params);
   const [searchBoxKey, setSearchBoxKey] = useState(0);
+  const searchBoxRef = useRef<HTMLInputElement>(null);
 
   // Also empties the search box and cancels its pending write, even when the
   // URL has no search yet.
@@ -44,6 +45,14 @@ function BookResults({ params, listUrl }: BookResultsProps) {
     listUrl.clearAll();
     setSearchBoxKey((key) => key + 1);
   };
+
+  // Clear all buttons go away once nothing is filtered, so focus moves to the
+  // new search box rather than falling to the page.
+  useEffect(() => {
+    if (searchBoxKey > 0) {
+      searchBoxRef.current?.focus();
+    }
+  }, [searchBoxKey]);
 
   if (isError && error instanceof ApiError) {
     if (error.status === 400) {
@@ -106,6 +115,7 @@ function BookResults({ params, listUrl }: BookResultsProps) {
         params={params}
         listUrl={listUrl}
         searchBoxKey={searchBoxKey}
+        searchBoxRef={searchBoxRef}
         onClearAll={clearAll}
       />
       {content}

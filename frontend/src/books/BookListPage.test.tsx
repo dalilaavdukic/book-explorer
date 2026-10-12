@@ -81,7 +81,7 @@ test("a filter the API rejects shows the same view, whose Clear all starts over"
   expect(requests.map(String)).toEqual(["page=1&page_size=12"]);
 });
 
-test("no match shows the empty state, and Clear all keeps only the sort", async () => {
+test("no match shows the empty state, and Clear all keeps only the sort and focuses the search box", async () => {
   const requests = serveBooks((params) =>
     params.has("search") ? [] : [hobbit],
   );
@@ -100,6 +100,7 @@ test("no match shows the empty state, and Clear all keeps only the sort", async 
   ).toBeInTheDocument();
   expect(location().search).toBe("?sort=-year");
   expect(navigationType()).toBe("PUSH");
+  expect(searchBox()).toHaveFocus();
   expect(requests.map(String)).toEqual([
     "page=1&page_size=12&search=zzz&author=3&genre=2&genre=5&sort=-year",
     "page=1&page_size=12&sort=-year",
@@ -322,7 +323,7 @@ test("a reader turning on Books with my notes lists their noted books from page 
   );
 });
 
-test("Clear all keeps only the sort and empties the search box", async () => {
+test("Clear all keeps only the sort, empties the search box and focuses it", async () => {
   serveBooks([hobbit]);
   serveAuthors([herbert]);
   const { location } = renderApp(
@@ -338,6 +339,7 @@ test("Clear all keeps only the sort and empties the search box", async () => {
 
   await waitFor(() => expect(location().search).toBe("?sort=-year"));
   expect(searchBox()).toHaveValue("");
+  expect(searchBox()).toHaveFocus();
   expect(author).toHaveValue("");
   expect(filters().queryByRole("button", { name: "Clear all" })).toBeNull();
 });

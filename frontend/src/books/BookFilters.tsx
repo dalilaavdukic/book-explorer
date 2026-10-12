@@ -1,3 +1,4 @@
+import type { Ref } from "react";
 import { useAuth } from "../auth/session.ts";
 import AuthorFilter from "./AuthorFilter.tsx";
 import styles from "./BookFilters.module.scss";
@@ -15,6 +16,7 @@ interface BookFiltersProps {
   listUrl: BookListUrl;
   /** Changing it starts the search box afresh, dropping any unsaved text. */
   searchBoxKey: number;
+  searchBoxRef: Ref<HTMLInputElement>;
   onClearAll: () => void;
 }
 
@@ -22,6 +24,7 @@ export default function BookFilters({
   params,
   listUrl,
   searchBoxKey,
+  searchBoxRef,
   onClearAll,
 }: BookFiltersProps) {
   const { user } = useAuth();
@@ -35,6 +38,7 @@ export default function BookFilters({
     <div role="search" aria-label="Find books" className={styles.filters}>
       <SearchBox
         key={searchBoxKey}
+        ref={searchBoxRef}
         search={params.search}
         onSearch={listUrl.setSearch}
       />

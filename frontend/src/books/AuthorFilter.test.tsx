@@ -197,7 +197,7 @@ test("leaving the field restores the chosen author's name", async () => {
   expect(location().search).toBe("?author=42");
 });
 
-test("Clear removes the author from the URL and empties the field", async () => {
+test("Clear removes the author from the URL, empties the field and focuses it", async () => {
   serveBooks([hobbit], 30);
   serveAuthors([tolkien]);
   const { location } = await renderList("/?author=42&page=2");
@@ -207,6 +207,7 @@ test("Clear removes the author from the URL and empties the field", async () => 
 
   await waitFor(() => expect(location().search).toBe(""));
   expect(authorInput()).toHaveValue("");
+  expect(authorInput()).toHaveFocus();
   expect(screen.queryByRole("button", { name: "Clear author" })).toBeNull();
 });
 
