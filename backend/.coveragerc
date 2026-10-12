@@ -1,8 +1,16 @@
 [run]
 source = .
 branch = True
+# The application code only: tests, migrations (mostly seed data) and the
+# entry points would inflate the figure.
 omit =
     .venv/*
+    */tests/*
+    */tests.py
+    */migrations/*
+    manage.py
+    config/asgi.py
+    config/wsgi.py
 
 [report]
 show_missing = True
