@@ -122,6 +122,13 @@ async function refetchOnFocus() {
   });
 }
 
+/** A request is sent only after awaited steps, so give one time to arrive. */
+async function expectNoneSent(requests: unknown[]) {
+  await expect(
+    waitFor(() => expect(requests).not.toEqual([]), { timeout: 200 }),
+  ).rejects.toThrow();
+}
+
 async function goToPage(page: number, pageCount = 2) {
   fireEvent.click(screen.getByRole("button", { name: "Next" }));
   await screen.findByText(`Page ${page} of ${pageCount}`);
@@ -142,10 +149,11 @@ test("a visitor sees a login link, and logging in returns to the book with their
   );
   renderApp("/books/7");
 
-  fireEvent.click(
-    await screen.findByRole("link", { name: "Log in to add notes" }),
-  );
-  expect(api.gets).toEqual([]);
+  const loginLink = await screen.findByRole("link", {
+    name: "Log in to add notes",
+  });
+  await expectNoneSent(api.gets);
+  fireEvent.click(loginLink);
   fireEvent.change(await screen.findByLabelText("Username"), {
     target: { value: "alice" },
   });
@@ -241,7 +249,7 @@ test.each(["0", "1.5", "abc", "10001"])(
     expect(
       createForm().getByLabelText("Page (optional)"),
     ).toHaveAccessibleDescription("Enter a whole number from 1 to 10,000.");
-    expect(api.posts).toEqual([]);
+    await expectNoneSent(api.posts);
   },
 );
 
