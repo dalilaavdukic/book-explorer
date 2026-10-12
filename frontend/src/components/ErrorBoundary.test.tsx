@@ -40,6 +40,7 @@ test("a page that fails to render shows the fallback and keeps the header usable
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "Something went wrong on this page.",
   );
+  expect(document.title).toBe("Something went wrong — Book Explorer");
   expect(reportUnexpectedError).toHaveBeenCalledWith(
     expect.any(RangeError),
     expect.stringContaining("NoteItem"),

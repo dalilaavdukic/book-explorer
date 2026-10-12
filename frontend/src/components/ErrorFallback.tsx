@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import styles from "./ErrorFallback.module.scss";
+import PageTitle from "./PageTitle.tsx";
 
 interface ErrorFallbackProps {
   message: string;
@@ -13,6 +14,7 @@ export default function ErrorFallback({
 }: ErrorFallbackProps) {
   return (
     <div role="alert" className={styles.error}>
+      <PageTitle name="Something went wrong" />
       <p className={styles.message}>{message}</p>
       <div className={styles.actions}>
         <button type="button" onClick={() => window.location.reload()}>
