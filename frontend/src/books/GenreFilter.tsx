@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import ErrorState from "../components/ErrorState.tsx";
 import { ChevronDownIcon } from "../components/icons.tsx";
 import LoadingState from "../components/LoadingState.tsx";
@@ -12,16 +12,43 @@ interface GenreFilterProps {
 
 export default function GenreFilter({ selected, onChange }: GenreFilterProps) {
   const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelId = useId();
 
+  // A click rather than a pointerdown, so a swipe that scrolls the panel on a
+  // touch screen doesn't close it. The event's path is checked rather than
+  // contains(), because a click inside can re-render and detach its target.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!open || root === null) {
+      return;
+    }
+    const closeOnClickOutside = (event: MouseEvent) => {
+      if (!event.composedPath().includes(root)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("click", closeOnClickOutside);
+    return () => document.removeEventListener("click", closeOnClickOutside);
+  }, [open]);
+
   return (
     <div
+      ref={rootRef}
       className={styles.genreFilter}
       onKeyDown={(event) => {
         if (event.key === "Escape" && open) {
           setOpen(false);
           buttonRef.current?.focus();
+        }
+      }}
+      onBlur={(event) => {
+        // Focus moving to nothing, as a click on the panel's legend or padding
+        // does, keeps it open.
+        const next = event.relatedTarget;
+        if (next !== null && !event.currentTarget.contains(next)) {
+          setOpen(false);
         }
       }}
     >
