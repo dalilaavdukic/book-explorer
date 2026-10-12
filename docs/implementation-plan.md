@@ -43,7 +43,7 @@ The checkpoint isn't a separate phase. It has no detailed plan or formal approva
 | 2 Book discovery | Complete, approved 2026-10-11 |
 | 3 Authentication | Complete, approved 2026-10-11 |
 | 4 User-specific notes | Complete, approved 2026-10-12 |
-| 5 Search, filtering and sorting | In progress |
+| 5 Search, filtering and sorting | Complete, approved 2026-10-12 |
 | 6 Final integration and delivery | Not started |
 
 ## 2. Phases at a glance
