@@ -1,3 +1,4 @@
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import generics, status
@@ -62,3 +63,10 @@ class NoteDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         # Another reader's note is simply not found: a 404 like a missing note.
         return Note.objects.filter(user=self.request.user)
+
+    def perform_update(self, serializer):
+        try:
+            serializer.save()
+        except Note.DoesNotExist:
+            # Deleted after this request loaded it, e.g. from another tab.
+            raise Http404("No Note matches the given query.") from None

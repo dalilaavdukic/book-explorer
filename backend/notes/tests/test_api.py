@@ -1,3 +1,5 @@
+from unittest import mock
+
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -5,6 +7,7 @@ from rest_framework.test import APITestCase
 from accounts.models import User
 from notes.models import Note
 from notes.tests import create_books
+from notes.views import NoteDetailView
 
 
 class NoteApiTestCase(APITestCase):
@@ -184,3 +187,17 @@ class NoteMethodTests(NoteApiTestCase):
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
         note.refresh_from_db()
         self.assertEqual((note.body, note.page), ("A note.", 12))
+
+
+class NoteDeletedDuringEditTests(NoteApiTestCase):
+    def test_editing_a_note_deleted_after_it_was_loaded_is_not_found(self):
+        stale = self.create_note()
+        Note.objects.filter(pk=stale.pk).delete()
+
+        with mock.patch.object(NoteDetailView, "get_object", return_value=stale):
+            response = self.patch(stale, {"body": "Changed."})
+
+        missing = self.client.get(f"/api/notes/{stale.pk}/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.json(), missing.json())
+        self.assertFalse(Note.objects.filter(pk=stale.pk).exists())
