@@ -137,7 +137,7 @@ export default function NoteForm({
           {submitLabel}
         </button>
         {onCancel && (
-          <button type="button" onClick={onCancel}>
+          <button type="button" onClick={onCancel} disabled={saving}>
             Cancel
           </button>
         )}

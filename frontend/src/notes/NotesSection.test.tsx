@@ -375,6 +375,25 @@ test("Cancel discards an edit's changes", async () => {
   expect(api.patches).toEqual([]);
 });
 
+test("Cancel stays disabled while an edit saves", async () => {
+  const api = await openAsAlice([makeNote(1, { body: "Original." })]);
+  const patch = holdNext("patch", "/api/notes/1/");
+
+  fireEvent.click(noteItem("Original.").getByRole("button", { name: "Edit" }));
+  changeEdit("Changed.");
+  fireEvent.click(editForm().getByRole("button", { name: "Save" }));
+  await patch.arrived;
+
+  await waitFor(() =>
+    expect(editForm().getByRole("button", { name: "Cancel" })).toBeDisabled(),
+  );
+  patch.release();
+  await waitFor(() =>
+    expect(screen.queryByRole("form", { name: "Edit note" })).toBeNull(),
+  );
+  expect(api.patches).toEqual([{ body: "Changed.", page: null }]);
+});
+
 test("a failed edit says so and keeps the changes", async () => {
   await openAsAlice([makeNote(1, { body: "Original.", page: 3 })]);
   failNext("patch", "/api/notes/1/", 500);
