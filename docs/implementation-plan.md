@@ -580,7 +580,7 @@ A phase is done when all of the following hold, in addition to the phase-specifi
 
 **Ground rules**
 
-- No new dependencies: SCSS modules, the shared variables, the system font stacks (a serif one for headings) and inline SVG icons (architecture §3). No dark theme.
+- No new dependencies: SCSS modules, the shared variables, the system font stack and inline SVG icons (architecture §3). No dark theme.
 - Nothing behaves differently unless an item deliberately changes it, and each such change has a test.
 - Markup changes stay small, so the tests keep finding elements by role and accessible name.
 - Text meets WCAG AA contrast, the edges of controls reach 3:1 (WCAG 1.4.11), and keyboard focus stays visible and is never hidden under the header (WCAG 2.4.11).

@@ -190,7 +190,7 @@ Above the book list are a search box, an author selector, a genre filter, the so
 **Palette:** an ink-blue header, a teal accent for links and primary buttons, an amber mark on the header and behind notices, and a warm paper background.
 
 **Fonts and icons:**
-- Headings, book titles and the wordmark use the system's serif fonts. The body uses `system-ui`.
+- All text, headings included, uses the system's own interface font (`system-ui`). Each system shows its native font, so none falls back from a font it doesn't have.
 - Icons are inline SVG.
 - No font or icon package is added.
 
@@ -216,7 +216,6 @@ Above the book list are a search box, an author selector, a genre filter, the so
 
 **Browser notes:**
 - Firefox shows no × in the search box.
-- Most Linux systems have none of the serif fonts the app names, so headings use the system's default serif.
 - In forced-colors mode (such as Windows High Contrast), the sort select and the search box's × go back to their native look.
 
 **Checked** in Chrome at 1280 px and 390 px wide, logged out and as a reader, with the keyboard and with reduced motion. There's no horizontal scroll at phone width.

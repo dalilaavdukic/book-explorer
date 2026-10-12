@@ -50,7 +50,7 @@ Two decisions deliberately depart from the assignment's wording or from common d
 | Routing | react-router-dom v7, declarative `<Routes>` | Required by the assignment. Data loading lives in TanStack Query, so the router only routes. | React Router data loaders/actions |
 | Server state | TanStack Query | See §8.4 | Hand-written `useEffect` fetching; React Router loaders |
 | API types | Generated with openapi-typescript from the committed schema | Types can't drift from the API, and CI enforces it | Hand-written types |
-| Styling | SCSS modules (`Component.module.scss`) and semantic HTML; the system font stacks (a serif one for headings) and inline SVG icons | Styles scoped to each component; shared variables and mixins via Sass `@use`; native elements, plus two small custom filter controls (§8.8), give accessibility without a library. System fonts and inline icons need no font or icon package. | CSS Modules, Tailwind, a component library, styled-components (CSS-in-JS: the same per-component scoping, but its CSS is generated in the browser while components render, which adds a runtime library and work on every styled render) |
+| Styling | SCSS modules (`Component.module.scss`) and semantic HTML; the system font stack and inline SVG icons | Styles scoped to each component; shared variables and mixins via Sass `@use`; native elements, plus two small custom filter controls (§8.8), give accessibility without a library. System fonts and inline icons need no font or icon package. | CSS Modules, Tailwind, a component library, styled-components (CSS-in-JS: the same per-component scoping, but its CSS is generated in the browser while components render, which adds a runtime library and work on every styled render) |
 | Backend tests | Django's test runner with DRF's `APITestCase` | Named by the assignment; no extra dependencies | pytest + pytest-django |
 | Frontend tests | Vitest, React Testing Library and MSW, used for targeted tests | Vite-native; MSW fakes the network, so tests exercise the real API client and cache | No frontend tests; broad component coverage; Playwright end-to-end tests |
 | Lint and format | Ruff (Python); ESLint and Prettier (TypeScript) | One fast tool per language plus a formatter | flake8 + black + isort; mypy (not used) |
@@ -769,7 +769,8 @@ There are no automated browser end-to-end tests: they would need both servers an
 - **Test harness.** `renderApp` returns the current location, the navigation type and `navigate`, from a probe inside the router. The probe reports in a layout effect, because React Router commits location changes in a transition, and a test must never see a page before its URL. `test/setup.ts` stubs `window.scrollTo`, which jsdom lacks.
 
 **Settled during visual design (Phase 6):**
-- **No new dependencies.** Fonts are system stacks, and icons are inline SVG (§3).
+- **No new dependencies.** The font is the system stack, and icons are inline SVG (§3).
+- **One font throughout.** Headings first used a system serif stack (Charter, Cambria, Georgia). Most Linux systems have none of those, so headings looked different there. They now use the body's `system-ui` stack at 700, so every system shows its own interface font everywhere.
 - **Design values** live in `styles/_variables.scss`, with their contrast ratios in §8.8.
   - The old input border (`#d1d9e0`) was about 1.4:1 against white, below the 3:1 that WCAG 1.4.11 requires for control edges.
   - Controls now have their own edge colour, `#868a8f` (3.5:1 on white). Cards, dividers and chips keep a light decorative edge, because they aren't controls.
