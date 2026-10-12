@@ -61,7 +61,8 @@ Two decisions deliberately depart from the assignment's wording or from common d
 ```
 backend/
 ├── manage.py, requirements.txt, requirements-dev.txt, ruff.toml
-├── config/     settings.py, urls.py, logging.py, pagination.py, wsgi.py, asgi.py
+├── config/     settings.py, urls.py, logging.py, pagination.py, parsers.py,
+│               schema.py, views.py, wsgi.py, asgi.py
 ├── accounts/   User model, auth endpoints, session authentication class,
 │               demo-user command, admin registration
 ├── catalog/    Author/Genre/Book models, schema and seed migrations,
