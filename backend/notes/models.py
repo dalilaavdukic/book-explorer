@@ -36,7 +36,9 @@ class Note(models.Model):
         ]
 
     def __str__(self):
-        return f"Note {self.pk} by {self.user} on {self.book}"
+        # No related lookups: the admin's delete pages list a book's or a
+        # reader's notes by this, which would otherwise be a query per note.
+        return f"Note {self.pk}"
 
     def save(self, *args, **kwargs):
         if not self._state.adding:
