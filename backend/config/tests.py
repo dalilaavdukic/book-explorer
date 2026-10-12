@@ -256,3 +256,40 @@ class ApiErrorHandlerTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("text/html", response["Content-Type"])
+
+
+DEEPLY_NESTED = "[" * 100_000
+
+
+class JsonParsingTests(APITestCase):
+    def assert_parse_error(self, response):
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(response.json()["detail"].startswith("JSON parse error"))
+
+    def test_deeply_nested_json_to_login_is_a_400(self):
+        client = APIClient(enforce_csrf_checks=True)
+        token = client.get("/api/auth/session/").cookies["csrftoken"].value
+
+        response = client.post(
+            "/api/auth/login/",
+            DEEPLY_NESTED,
+            content_type="application/json",
+            headers={"X-CSRFToken": token},
+        )
+
+        self.assert_parse_error(response)
+
+    def test_deeply_nested_or_truncated_json_to_a_note_is_a_400(self):
+        self.client.force_login(User.objects.create_user(username="reader"))
+        book = Book.objects.first()
+
+        for body in (DEEPLY_NESTED, '{"body":'):
+            with self.subTest(body=body[:10]):
+                response = self.client.post(
+                    f"/api/books/{book.pk}/notes/",
+                    body,
+                    content_type="application/json",
+                )
+
+                self.assert_parse_error(response)
+        self.assertFalse(Note.objects.exists())
