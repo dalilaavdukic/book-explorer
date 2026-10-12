@@ -40,6 +40,15 @@ class IdMultipleChoiceFilter(filters.ModelMultipleChoiceFilter):
     field_class = IdMultipleChoiceField
 
 
+class AuthorFilter(filters.FilterSet):
+    search = filters.CharFilter(
+        field_name="name",
+        lookup_expr="icontains",
+        max_length=100,
+        help_text="Text the author's name contains.",
+    )
+
+
 class BookFilter(filters.FilterSet):
     search = filters.CharFilter(
         max_length=100,

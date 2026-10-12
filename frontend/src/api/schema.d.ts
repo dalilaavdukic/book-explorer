@@ -52,6 +52,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/authors/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["authors_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/authors/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["authors_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/books/": {
         parameters: {
             query?: never;
@@ -92,6 +124,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["books_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/genres/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["genres_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -276,6 +324,51 @@ export interface operations {
             };
         };
     };
+    authors_list: {
+        parameters: {
+            query?: {
+                /** @description The maximum number of suggestions. */
+                limit?: number;
+                /** @description Text the author's name contains. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Author"][];
+                };
+            };
+        };
+    };
+    authors_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Author"];
+                };
+            };
+        };
+    };
     books_list: {
         parameters: {
             query?: {
@@ -424,6 +517,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BookDetail"];
+                };
+            };
+        };
+    };
+    genres_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Genre"][];
                 };
             };
         };
