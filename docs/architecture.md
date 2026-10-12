@@ -1,6 +1,6 @@
 # Book Explorer: Architecture
 
-*Living document, last updated 2026-10-12 (Phase 7, focus after a page change). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
+*Living document, last updated 2026-10-12 (Phase 7, the finished app). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
 
 ## 1. Purpose and status
 
@@ -406,7 +406,7 @@ Pagination is chosen per endpoint, not set globally:
   - year → title → id
   - In a descending sort only the chosen field is reversed: ties are still broken by title A–Z, then id. "Year, newest first" lists 1985 as *Blood Meridian*, *Love in the Time of Cholera*, *The Handmaid's Tale*.
 - **Notes** are ordered newest first by `created_at`, then by id (also descending), so notes saved in the same instant keep a fixed order and paging never repeats or skips one (AC-N13).
-- **Note counts** (AC-X1, an enhancement) are calculated in the same list query, never one query per book.
+- **Note counts** (AC-X1, an enhancement) weren't built (decided 2026-10-12). Had they been, they would be calculated in the same list query, never one query per book.
 
 ### 7.7 OpenAPI schema and API docs
 
@@ -443,7 +443,8 @@ frontend/src/
 ├── notes/        NotesSection, NoteForm, NoteItem, query and mutation hooks
 ├── components/   shared: Layout and Header, Pagination (book list and
 │                 notes), LoadingState, ErrorState, EmptyState, NotFound,
-│                 ErrorBoundary and ErrorFallback, icons.tsx (inline SVG icons)
+│                 ErrorBoundary and ErrorFallback, PageTitle, icons.tsx
+│                 (inline SVG icons)
 ├── styles/       _variables.scss, _mixins.scss, global.scss
 └── App.tsx, main.tsx, errorReporting.ts
 ```
@@ -513,7 +514,7 @@ Hand-written `useEffect` fetching was rejected because it would mean writing req
 
 **Private data at authentication boundaries** (AC-A8)
 
-A response is *private* if it depends on who is logged in: a reader's notes, `has_notes` book lists and, if AC-X1 is built, every book list fetched by a logged-in reader, because it carries their note counts. Everything else is *public*: book lists for visitors, book detail, authors and genres.
+A response is *private* if it depends on who is logged in: a reader's notes, `has_notes` book lists and, had AC-X1 been built, every book list fetched by a logged-in reader, because it would carry their note counts. Everything else is *public*: book lists for visitors, book detail, authors and genres.
 
 - **Private query keys share one root and include the reader's id**, e.g. `['private', readerId, 'notes', bookId, page]`. The root lets one call find every private entry. The id means a result is only ever stored under the keys of the reader it was requested for, so the next reader's queries can't be answered from it.
 - **One function updates the session and, whenever the reader changes (including to or from nobody), runs the clean-up.** That covers logging out, logging in, any 401 (expiry, or logout in another tab), and a re-check that finds a different reader or none. The clean-up:
@@ -687,7 +688,7 @@ In priority order:
    - **Paging:** a sorted list with ties never repeats or skips a book across pages; `page_size` limits apply.
    - **Author suggestions:** partial, case-insensitive matches in `sort_name` order; only authors with books; the `limit` default and maximum; `GET /api/authors/{id}/` returns 404 for an unknown id.
    - **Bad input:** invalid values return 400 (including one unknown id among several `genre` values, and `limit=0` or `limit=21`), unknown parameter names are ignored, and an out-of-range page returns 404.
-5. **Query efficiency.** `assertNumQueries` shows the book list takes the same number of queries for 3 books as for 30, and does the same for note counts (AC-X1).
+5. **Query efficiency.** `assertNumQueries` shows the book list takes the same number of queries for 3 books as for 30, with and without `has_notes`, and the admin's delete page for a book the same for one note as for several. AC-X1's note counts would have had the same test; they weren't built.
 6. **Seed migration and demo users.**
    - The catalog exists after migrating, with the 100 seeded books.
    - One round-trip test adds a book outside the seed, by a seeded author, then rolls the seed back. It checks that only the seeded books were removed, that the added book and its author remain, and that the notes migrations were unapplied with it, so the notes table no longer exists (AC-M2). It then migrates forward again, which must reuse the kept author.
@@ -699,7 +700,7 @@ In priority order:
 
 ### 9.2 Frontend (Vitest, React Testing Library, MSW)
 
-There are about 10–20 targeted tests, aimed at behaviour that's easy to break and hard to notice by clicking around. MSW fakes the API at the network level, so the real API client, query cache and components all run in the tests.
+The suite has 168 tests, aimed at behaviour that's easy to break and hard to notice by clicking around. MSW fakes the API at the network level, so the real API client, query cache and components all run in the tests.
 
 - the API client: the CSRF header and how errors are mapped
 - the 401 rule, including an unsaved note form surviving session expiry and the private-data clean-up (AC-N12)
@@ -713,10 +714,12 @@ There are about 10–20 targeted tests, aimed at behaviour that's easy to break 
 - search debouncing (AC-S9), and the author selector: debounced suggestions, keyboard selection, and restoring a selected author from `?author=` through the author detail endpoint (AC-S10)
 - notes paging: creating a note returns to page 1, and deleting the only note on the last page moves to the previous page (AC-N13)
 - double-submit protection on note forms (AC-N2)
+- unexpected errors: the error boundaries, and the one function that reports errors (§8.4)
+- page titles, and focus moving to the page's heading on navigation (§8.8)
 
 ### 9.3 Manual acceptance checklist
 
-There are no automated browser end-to-end tests: they would need both servers and a test database running in CI. Instead, Phase 7 walks through every user journey and acceptance criterion against the running app with a written checklist. That includes the cross-tab cases of AC-A8, which need two real tabs. Claude Code carries out the walkthrough through Playwright MCP wherever possible, and by hand otherwise (implementation plan §4); no browser test code is committed.
+There are no automated browser end-to-end tests: they would need both servers and a test database running in CI. Instead, Phase 7 walks through every user journey and acceptance criterion against the running app with a written checklist. That includes the cross-tab cases of AC-A8, which need two real tabs. Claude Code carries out the walkthrough through Playwright MCP wherever possible, and by hand otherwise (implementation plan §4); no browser test code is committed. The results, with each criterion's method and evidence, are in `docs/acceptance-checklist.md`.
 
 ### 9.4 Code quality and CI
 
@@ -747,7 +750,7 @@ There are no automated browser end-to-end tests: they would need both servers an
 | A tab isn't told immediately about a login or logout in another tab | Until it notices (a 401, or the session re-check when it regains focus), it keeps showing its last state, including any open draft, and its requests run with whichever session the browser now holds | The server always answers for the browser's current session, so a stale tab can't reach data that session can't. Once it notices, the clean-up runs (§8.5). Cross-tab messaging (`BroadcastChannel`) would make it immediate, but isn't needed at this scale. |
 | The author combobox is built by hand | Its keyboard and screen-reader behaviour is ours to get right | One small component following the WAI-ARIA combobox pattern, with a keyboard test (§9.2); not worth an autocomplete dependency |
 | Generated types are only as accurate as the schema | A wrong annotation produces wrong types | Custom pieces are annotated deliberately; CI catches a stale schema, but not a wrong annotation |
-| No production hardening | Not deployable as is | Out of scope. Deployment would need HTTPS, `Secure` cookies, `DEBUG` off, a real `SECRET_KEY`, `ALLOWED_HOSTS`, a reverse proxy serving the SPA build, rate limiting, and `django.security` logging tuned for scanner traffic (§4). |
+| No production hardening | Not deployable as is | Out of scope. Deployment would need HTTPS with HSTS, `Secure` cookies, `DEBUG` off, a real `SECRET_KEY`, `ALLOWED_HOSTS`, `STATIC_ROOT` and `collectstatic` for the admin's and Swagger UI's files, a reverse proxy serving the SPA build and those files, a Content-Security-Policy, rate limiting, a periodic `clearsessions` to remove expired sessions, and `django.security` logging tuned for scanner traffic (§4). |
 
 **Settled during scaffolding (Phase 1):**
 - **Versions.**
@@ -829,6 +832,9 @@ There are no automated browser end-to-end tests: they would need both servers an
 - **JSON errors** (§7.3). The catch-all is a plain Django view, so it stays out of the schema, and it's exempt from Django's CSRF middleware. DRF exempts its own views and checks CSRF itself, in JSON; without the exemption, a write to an unknown path would get the middleware's HTML 403. It reads and changes nothing.
 - **Error boundaries** (§8.4). The fallback is one component, `ErrorFallback`, given the link that suits each boundary. The reporting function is named `reportUnexpectedError`, not `reportError`, so a module that forgets to import it fails to compile instead of calling the browser's global `reportError`.
 - **JSON parser.** `config.parsers.JSONParser` extends DRF's to turn the `RecursionError` that Python's decoder raises for deeply nested JSON into a 400 parse error. DRF catches only `ValueError`, so a body of about 100 KB of `[` was a 500 on every write, login included.
-- **A stale edit can't bring a note back.** `Model.save()` falls back to an INSERT when its UPDATE matches no row, so a PATCH that loaded a note just before a DELETE committed re-created it (seen in about one race in six). `Note.save` now raises `Note.DoesNotExist` when the stored row is gone, which the detail view answers with the same 404 as a missing note, and saves existing notes with `force_update`. A deletion in the instant between that check and the UPDATE then fails the request with a logged 500 instead of re-inserting the note.
+- **A stale edit can't bring a note back.** `Model.save()` falls back to an INSERT when its UPDATE matches no row, so a PATCH that loaded a note just before a DELETE committed re-created it. `Note.save` now raises `Note.DoesNotExist` when the stored row is gone, which the detail view answers with the same 404 as a missing note, and saves existing notes with `force_update`. A deletion in the instant between that check and the UPDATE then fails the request with a logged 500 instead of re-inserting the note.
 - **Note fields take only their JSON type.** DRF's `CharField` stores a number as text, and its `IntegerField` accepts `"5"`, `" 5 "` and `1.0`. `NoteSerializer` maps the model's text and integer fields to subclasses that accept only a JSON string and a JSON integer, so those get a 400 like any other invalid value (AC-N3). The schema is unchanged.
 - **Documented errors** (§7.7). `ValidationError`'s shape (`additionalProperties`) can't be expressed by a serializer, so a small drf-spectacular extension describes it. `Detail` moved from `notes` to `config/schema.py`, since every app uses it. The search filters declare their schema through `SearchFilter`, which sets the limit and the schema together.
+- **Coverage scope.** `backend/.coveragerc` leaves out the tests, the migrations, `manage.py` and the WSGI and ASGI entry points, so the README's figure measures the application code only (§9.1).
+- **AC-X2:** the author's name on a book's page is a plain `<Link>` to `/?author=<id>`, styled by the global link rule. The author selector already restores the name from the id (§8.7). AC-X1 wasn't built (decided 2026-10-12).
+- **Acceptance record.** `docs/acceptance-checklist.md` gives each criterion's method, evidence and result. The core it verified is tagged `v1.0-core`; AC-X2 was verified after it.

@@ -1,6 +1,6 @@
 # Book Explorer: Implementation Plan
 
-*Living document, last updated 2026-10-12 (Phase 7 decisions recorded). Employer requirements: `Development_Take-Home_Assignment.md`. Product requirements: `docs/spec.md`. Technical design: `docs/architecture.md`.*
+*Living document, last updated 2026-10-12 (Phase 7, the finished app). Employer requirements: `Development_Take-Home_Assignment.md`. Product requirements: `docs/spec.md`. Technical design: `docs/architecture.md`.*
 
 ## 1. Purpose and how this plan is used
 
@@ -715,7 +715,7 @@ These items are built earlier than the feature they serve, or finished across mo
 | Session-transition function and private-data cache boundary | Phase 3 | Phases 4 and 5 only add private queries, plus Phase 4's draft rules |
 | AC-M2 | Phase 2 → 4 | The notes table must exist before its removal can be tested |
 | AC-A5, AC-A7 | Phase 3 → 4 | Need an endpoint that requires login |
-| AC-A8 | Phase 3 → 4 → 5 (→ AC-X1) | Private data arrives in stages |
+| AC-A8 | Phase 3 → 4 → 5 (→ AC-X1, not built) | Private data arrives in stages |
 | AC-D3 | Phase 2 → 5 | The full list state arrives in Phase 5 |
 
 ## 7. Acceptance criteria by phase
@@ -760,7 +760,7 @@ Where a criterion spans phases, it is finished in the last phase listed.
 | AC-S7 | 5 | Browser |
 | AC-S10 | 5 | BE, FE, Browser |
 | AC-X1 (optional) | 7 | Not built (decided 2026-10-12) |
-| AC-X2 (optional) | 7 | Browser |
+| AC-X2 (optional) | 7 | FE, Browser |
 
 **User journeys**
 
@@ -784,7 +784,7 @@ Every journey is walked through end to end in Phase 7.
 
 | Risk | Consequence if ignored | Mitigation in this plan |
 |---|---|---|
-| The private-data boundary (AC-A8) is built across Phases 3–5, and AC-X1 changes it | One reader's notes or results reach the next reader | The session function and cache boundary are built in Phase 3, before any private data exists. One function decides whether a book list is public or private. The AC-A8 tests are extended in every phase that adds private data. |
+| The private-data boundary (AC-A8) is built across Phases 3–5, and AC-X1 would have changed it (not built) | One reader's notes or results reach the next reader | The session function and cache boundary are built in Phase 3, before any private data exists. One function decides whether a book list is public or private. The AC-A8 tests are extended in every phase that adds private data. |
 | Curating 100 accurate books is slow, and accuracy is a requirement | Phase 2 stalls, or wrong data ships | Curation starts first in Phase 2. The verification source is chosen in its plan and recorded in the README. |
 | Shortcuts taken in Phase 2 | Rework in Phases 4 and 5 | The pagination class and component, the list-state module and the default order are built once, for their later users |
 | The schema and generated types drift apart | The frontend compiles against an API that no longer exists | The pipeline and CI drift checks exist from Phase 1, and every API change regenerates both |

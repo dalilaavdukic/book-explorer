@@ -53,7 +53,7 @@ Evidence names test files and test names. Backend tests are under `backend/<app>
 | AC-M1 | Migrating an empty database produces the documented catalog | BE | `catalog/test_seed.py`: `test_migrations_produce_the_documented_catalog` (100 books, 50 authors, 12 genres), `test_seeded_values`, `test_every_author_has_a_sort_key_and_every_book_a_description`, `test_several_authors_have_more_than_one_book`. Also seen when migrating a fresh database for J10. | Pass |
 | AC-M2 | Rolling back removes only seeded data; the notes table is dropped first | BE | `catalog/test_seed.py` `test_rollback_removes_only_seeded_data_and_reapplying_reuses_the_rest`: a book added outside the seed, with its author and genre, survives; the notes table is gone; re-applying restores the catalog. | Pass |
 | AC-M3 | The migration uses historical models | BE, review | The same round trip. `catalog/migrations/0002_seed_books.py` loads every model through `apps.get_model`. | Pass |
-| AC-M4 | The README describes the dataset | README | README, "Seed data": contents, conventions, sort keys, how it was checked, and rolling back. | Pass |
+| AC-M4 | The README describes the dataset | README | README, "Seed data": contents, conventions, sort keys, how it was checked, and rolling back. Checked again against the README as submitted. | Pass |
 
 ## Authentication and sessions
 
@@ -79,7 +79,7 @@ Evidence names test files and test names. Backend tests are under `backend/<app>
 | AC-U1 | The command creates `alice` and `bob`, or only the missing one | BE | `accounts/test_demo_users.py` `test_creates_both_readers_when_neither_exists`, `test_creates_only_the_missing_reader`. On a fresh database it printed "Created alice." and "Created bob." | Pass |
 | AC-U2 | A second run creates nothing and doesn't fail | BE | `test_second_run_creates_nothing_and_reports_both_as_skipped`. The second run on the fresh database skipped both and exited with 0. | Pass |
 | AC-U3 | An existing user, even with a changed password, is left alone and reported | BE | `test_existing_user_with_a_changed_password_is_left_untouched` | Pass |
-| AC-U4 | The README documents it as dev-only, with credentials and a production warning | README | README, "Users": the credentials table and "Development and review only. … Never run this command on a production database". | Pass |
+| AC-U4 | The README documents it as dev-only, with credentials and a production warning | README | README, "Users": the credentials table and "Development and review only. … Never run this command on a production database". Checked again against the README as submitted. | Pass |
 
 ## Notes
 

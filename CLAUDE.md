@@ -54,7 +54,7 @@ Never say a test or check passed unless it ran and you saw its output. State wha
 ## Engineering guardrails
 
 - Prefer the simplest design that meets the spec: DRF generic views and viewsets, no service or repository layers, no speculative abstractions.
-- Build only the current phase. Work pulled into an earlier phase is exactly what plan §6 lists. The enhancements (AC-X1, AC-X2) wait for Phase 7, after the core is tagged.
+- Build only the current phase. Work pulled into an earlier phase is exactly what plan §6 lists. The enhancements wait for Phase 7, after the core is tagged: AC-X2 is built there, and AC-X1 isn't built (decided 2026-10-12).
 - Use only the libraries and tools approved in architecture §3, each added in the phase that first needs it. Any other dependency, service or infrastructure needs approval.
 - Authorization lives on the server (architecture §6.5, §6.6). Endpoints require login by default; public ones, such as the catalog, opt in and work without logging in. A logged-out request to a protected endpoint, or for personalized results (`has_notes=true`), gets 401; a failed CSRF check gets 403. A logged-in reader can list and create only their own notes on a book. Every notes query starts from the reader's own notes, so another reader's individual note returns 404 (AC-N6). A note's owner comes from the session and its book from the URL.
 - Private data in the browser (architecture §8.5, AC-A8): private query keys go under the reader's `private` root, and every change of reader goes through the single session-transition function. One reader must never see another's notes, personalized results or unsaved draft.
