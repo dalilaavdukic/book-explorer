@@ -9,7 +9,8 @@ import {
 import { http, HttpResponse } from "msw";
 import { expect, onTestFinished, test, vi } from "vitest";
 import type { Session, User } from "./api/auth.ts";
-import type { Book, BookDetail, PaginatedBookList } from "./api/books.ts";
+import type { Book, BookDetail } from "./api/books.ts";
+import { serveBook, serveBooks } from "./test/catalogApi.ts";
 import { serveNotes } from "./test/notesApi.ts";
 import { renderApp } from "./test/renderApp.tsx";
 import { server } from "./test/server.ts";
@@ -28,26 +29,6 @@ const nineteenEightyFourDetail: BookDetail = {
 };
 
 const alice: User = { id: 1, username: "alice" };
-
-function serveBook(book: BookDetail) {
-  server.use(http.get(`/api/books/${book.id}/`, () => HttpResponse.json(book)));
-}
-
-function serveBooks(results: Book[], count = results.length) {
-  const requests: URLSearchParams[] = [];
-  server.use(
-    http.get("/api/books/", ({ request }) => {
-      requests.push(new URL(request.url).searchParams);
-      return HttpResponse.json<PaginatedBookList>({
-        count,
-        next: null,
-        previous: null,
-        results,
-      });
-    }),
-  );
-  return requests;
-}
 
 function recordPosts(path: string, response: () => Response) {
   const requests: Request[] = [];
