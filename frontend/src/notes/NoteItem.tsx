@@ -39,7 +39,7 @@ export default function NoteItem({
     <li className={styles.note}>
       <p className={styles.body}>{note.body}</p>
       <p className={styles.meta}>
-        {page !== null && <span>p. {page}</span>}
+        {page !== null && <span className={styles.pageNumber}>p. {page}</span>}
         <Time value={note.created_at} />
         {note.edited_at !== null && (
           <span>

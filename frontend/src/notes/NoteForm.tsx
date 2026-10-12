@@ -124,7 +124,7 @@ export default function NoteForm({
       {expired && (
         // Logging in again discards the draft (spec §6), hence the advice to
         // copy it first.
-        <p role="alert" className={styles.error}>
+        <p role="alert" className={styles.expired}>
           Your session has expired, and this note isn't saved. Copy anything you
           want to keep, then log in again.{" "}
           <Link to="/login" state={{ from: location }}>

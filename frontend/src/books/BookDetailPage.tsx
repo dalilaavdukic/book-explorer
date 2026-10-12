@@ -1,6 +1,7 @@
 import { Link, useLocation, useParams } from "react-router-dom";
 import { ApiError } from "../api/client.ts";
 import ErrorState from "../components/ErrorState.tsx";
+import { ArrowLeftIcon } from "../components/icons.tsx";
 import LoadingState from "../components/LoadingState.tsx";
 import NotFound from "../components/NotFound.tsx";
 import NotesSection from "../notes/NotesSection.tsx";
@@ -64,7 +65,10 @@ function BookDetail({ id }: { id: number }) {
   return (
     <>
       <p className={styles.back}>
-        <Link to={{ pathname: "/", search: listSearch }}>Back to books</Link>
+        <Link to={{ pathname: "/", search: listSearch }}>
+          <ArrowLeftIcon />
+          Back to books
+        </Link>
       </p>
       {content}
     </>

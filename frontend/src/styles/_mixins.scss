@@ -29,6 +29,15 @@
   box-shadow: $shadow-sm;
 }
 
+// A tinted panel with a bar down its left edge, for notices and errors.
+@mixin notice($tint: $color-mark-tint, $bar: $color-mark) {
+  padding: $space-3 $space-4;
+  color: $color-text;
+  background-color: $tint;
+  border-left: 4px solid $bar;
+  border-radius: $radius;
+}
+
 @mixin control {
   min-height: $control-height;
   padding: $space-1 $space-3;

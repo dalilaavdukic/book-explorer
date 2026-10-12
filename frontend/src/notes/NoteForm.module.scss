@@ -2,9 +2,15 @@
 @use "../styles/mixins" as *;
 
 .form {
+  @include card;
   display: flex;
   flex-direction: column;
-  gap: $space-3;
+  gap: $space-4;
+  padding: $space-5;
+
+  @include narrow {
+    padding: $space-4;
+  }
 }
 
 .field {
@@ -23,7 +29,13 @@
 
 .error {
   margin: 0;
+  font-size: $text-sm;
   color: $color-danger;
+}
+
+.expired {
+  @include notice;
+  margin: 0;
 }
 
 .actions {

@@ -34,6 +34,14 @@ export function ArrowDownIcon(props: IconProps) {
   );
 }
 
+export function ArrowLeftIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M13 8H3M7 4L3 8l4 4" />
+    </Icon>
+  );
+}
+
 export function ArrowUpIcon(props: IconProps) {
   return (
     <Icon {...props}>

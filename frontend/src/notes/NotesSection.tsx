@@ -270,7 +270,7 @@ function BookNotes({ bookId }: { bookId: number }) {
         ? list
         : !showCreateForm &&
           !editForm && (
-            <p>
+            <p className={styles.prompt}>
               <Link to="/login" state={{ from: location }}>
                 Log in to add notes
               </Link>

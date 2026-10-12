@@ -1,14 +1,26 @@
 @use "../styles/variables" as *;
 @use "../styles/mixins" as *;
 
+// The body across the top; the meta and the actions share the row under it,
+// and stack on narrow screens.
 .note {
-  padding: $space-3 $space-4;
-  border: 1px solid $color-border;
-  border-radius: $radius;
+  @include card;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: $space-3 $space-4;
+  align-items: center;
+  padding: $space-4 $space-5;
+
+  @include narrow {
+    grid-template-columns: minmax(0, 1fr);
+    padding: $space-4;
+  }
 }
 
 .body {
+  grid-column: 1 / -1;
   margin: 0;
+  line-height: $leading-relaxed;
   // Keeps the reader's line breaks, and wraps long words.
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -17,49 +29,93 @@
 .meta {
   display: flex;
   flex-wrap: wrap;
-  gap: $space-3;
-  margin: $space-2 0 0;
-  font-size: 0.85rem;
+  gap: $space-1 $space-3;
+  align-items: center;
+  margin: 0;
+  font-size: $text-sm;
   color: $color-muted;
+}
+
+.pageNumber {
+  padding: 0 $space-2;
+  font-weight: 600;
+  color: $color-mark-text;
+  background: $color-mark-tint;
+  border-radius: $radius-pill;
 }
 
 .actions {
   display: flex;
-  gap: $space-2;
-  margin-top: $space-3;
+  gap: $space-1;
+
+  .note > & {
+    justify-self: end;
+
+    @include narrow {
+      justify-self: start;
+    }
+  }
 }
 
 .edit,
 .delete {
   @include button-text($color-muted);
+  min-height: 2.25rem;
+}
+
+.edit:where(:hover:not(:disabled)) {
+  color: $color-accent;
+}
+
+.delete:where(:hover:not(:disabled)) {
+  color: $color-danger;
+  background-color: $color-danger-tint;
 }
 
 .error {
-  margin: $space-2 0 0;
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: $text-sm;
+  font-weight: 600;
   color: $color-danger;
 }
 
 .dialog {
-  max-width: 24rem;
-  padding: $space-4 $space-6;
+  max-width: min(24rem, calc(100vw - 2rem));
+  padding: $space-6;
   color: $color-text;
-  border: 1px solid $color-border;
-  border-radius: $radius;
+  background: $color-surface;
+  border: 0;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-lg;
+
+  // Only when open, so a closed dialog stays hidden.
+  &[open] {
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+  }
 
   &::backdrop {
-    background: rgb(0 0 0 / 0.4);
+    background: rgb(29 51 70 / 0.5);
   }
 
   p {
-    margin: $space-2 0 0;
+    margin: 0;
   }
-}
 
-.confirmDelete {
-  @include button-danger;
+  .actions {
+    justify-content: flex-end;
+    gap: $space-2;
+    margin-top: $space-4;
+  }
 }
 
 .dialogTitle {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: $text-lg;
+}
+
+.confirmDelete {
+  @include button-danger;
 }

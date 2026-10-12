@@ -2,31 +2,48 @@
 
 .back {
   margin: 0 0 $space-6;
+
+  a {
+    display: inline-flex;
+    gap: $space-2;
+    align-items: center;
+    font-weight: 600;
+  }
 }
 
 .book {
-  max-width: 44rem;
+  max-width: $reading-width;
 }
 
 .title {
   margin: 0;
-  line-height: 1.2;
+  font-size: $text-display;
 }
 
 .author {
-  margin: $space-2 0 $space-4;
-  font-size: 1.15rem;
+  margin: $space-2 0 $space-5;
+  font-size: $text-lg;
   color: $color-muted;
 }
 
 .facts {
   display: flex;
   flex-wrap: wrap;
-  gap: $space-8;
+  gap: $space-2;
   margin: 0 0 $space-6;
 
+  > div {
+    display: flex;
+    gap: $space-2;
+    align-items: baseline;
+    padding: $space-1 $space-3;
+    background: $color-surface;
+    border: 1px solid $color-border;
+    border-radius: $radius-pill;
+  }
+
   dt {
-    font-size: 0.85rem;
+    font-size: $text-sm;
     color: $color-muted;
   }
 
@@ -37,6 +54,8 @@
 }
 
 .description {
+  max-width: 65ch;
   margin: 0;
-  font-size: 1.05rem;
+  font-size: $text-lg;
+  line-height: $leading-relaxed;
 }
