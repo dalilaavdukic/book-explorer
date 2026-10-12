@@ -356,7 +356,7 @@ Pagination is chosen per endpoint, not set globally:
 
 **Invalid values** (spec §8, AC-S8):
 
-- **Malformed values return 400**, with a message for each bad parameter. Examples:
+- **Malformed values return 400.** Every bad filter parameter gets its own message in the same response. `page_size` and `limit` are checked only once the filters are valid, so their errors appear after the filter errors are fixed. Examples:
   - `sort=banana`
   - `author=abc`, or `author=999` when no such author exists
   - `genre=abc`, or several `genre` values where any one doesn't exist
