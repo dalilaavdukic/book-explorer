@@ -52,6 +52,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/authors/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["authors_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/authors/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["authors_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/books/": {
         parameters: {
             query?: never;
@@ -92,6 +124,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["books_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/genres/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["genres_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -276,13 +324,82 @@ export interface operations {
             };
         };
     };
+    authors_list: {
+        parameters: {
+            query?: {
+                /** @description The maximum number of suggestions. */
+                limit?: number;
+                /** @description Text the author's name contains. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Author"][];
+                };
+            };
+        };
+    };
+    authors_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Author"];
+                };
+            };
+        };
+    };
     books_list: {
         parameters: {
             query?: {
+                /** @description Only books by this author. */
+                author?: number;
+                /** @description Only books in any of these genres. Repeat for several. */
+                genre?: number[];
+                /**
+                 * @description `true` lists only the books the reader has notes on, and requires login. `false` is the same as leaving it out.
+                 *
+                 *     * `true` - true
+                 *     * `false` - false
+                 */
+                has_notes?: "false" | "true";
                 /** @description A page number within the paginated result set. */
                 page?: number;
                 /** @description Number of results to return per page. */
                 page_size?: number;
+                /** @description Words that must all appear in the title or the author's name. */
+                search?: string;
+                /**
+                 * @description The order of the list, `title` by default. A leading `-` means descending. Ties are broken by title, then id.
+                 *
+                 *     * `title` - title
+                 *     * `-title` - -title
+                 *     * `author` - author
+                 *     * `-author` - -author
+                 *     * `year` - year
+                 *     * `-year` - -year
+                 */
+                sort?: "-author" | "-title" | "-year" | "author" | "title" | "year";
             };
             header?: never;
             path?: never;
@@ -400,6 +517,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BookDetail"];
+                };
+            };
+        };
+    };
+    genres_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Genre"][];
                 };
             };
         };

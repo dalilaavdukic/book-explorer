@@ -51,10 +51,88 @@ paths:
               schema:
                 $ref: '#/components/schemas/Session'
           description: ''
+  /api/authors/:
+    get:
+      operationId: authors_list
+      parameters:
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 20
+          default: 10
+        description: The maximum number of suggestions.
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Text the author's name contains.
+      tags:
+      - authors
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Author'
+          description: ''
+  /api/authors/{id}/:
+    get:
+      operationId: authors_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - authors
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Author'
+          description: ''
   /api/books/:
     get:
       operationId: books_list
       parameters:
+      - in: query
+        name: author
+        schema:
+          type: integer
+        description: Only books by this author.
+      - in: query
+        name: genre
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Only books in any of these genres. Repeat for several.
+        explode: true
+        style: form
+      - in: query
+        name: has_notes
+        schema:
+          type: string
+          enum:
+          - 'false'
+          - 'true'
+        description: |-
+          `true` lists only the books the reader has notes on, and requires login. `false` is the same as leaving it out.
+
+          * `true` - true
+          * `false` - false
       - name: page
         required: false
         in: query
@@ -67,6 +145,31 @@ paths:
         description: Number of results to return per page.
         schema:
           type: integer
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Words that must all appear in the title or the author's name.
+      - in: query
+        name: sort
+        schema:
+          type: string
+          enum:
+          - -author
+          - -title
+          - -year
+          - author
+          - title
+          - year
+        description: |-
+          The order of the list, `title` by default. A leading `-` means descending. Ties are broken by title, then id.
+
+          * `title` - title
+          * `-title` - -title
+          * `author` - author
+          * `-author` - -author
+          * `year` - year
+          * `-year` - -year
       tags:
       - books
       security:
@@ -180,6 +283,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BookDetail'
+          description: ''
+  /api/genres/:
+    get:
+      operationId: genres_list
+      tags:
+      - genres
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Genre'
           description: ''
   /api/notes/{id}/:
     get:

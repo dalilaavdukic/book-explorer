@@ -38,6 +38,20 @@ test("returns the JSON body and encodes query parameters", async () => {
   expect(search).toBe("?search=caf%C3%A9+%26+100%25&page=2");
 });
 
+test("sends an array as one parameter per item, in order", async () => {
+  let search = "";
+  server.use(
+    http.get("/api/books/", ({ request }) => {
+      search = new URL(request.url).search;
+      return HttpResponse.json({ count: 0 });
+    }),
+  );
+
+  await apiGet("/api/books/", { query: { genre: [5, 2], page: 1 } });
+
+  expect(search).toBe("?genre=5&genre=2&page=1");
+});
+
 test.each([
   [404, { detail: "Not found." }],
   [400, { page_size: ["Enter a whole number from 1 to 100."] }],

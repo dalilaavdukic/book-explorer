@@ -18,7 +18,8 @@ export class NetworkError extends Error {
   }
 }
 
-type QueryValue = string | number | undefined;
+type QueryScalar = string | number;
+type QueryValue = QueryScalar | QueryScalar[] | undefined;
 
 interface GetOptions {
   query?: Record<string, QueryValue>;
@@ -31,8 +32,11 @@ export function apiGet<T>(
 ): Promise<T> {
   const params = new URLSearchParams();
   for (const [name, value] of Object.entries(query)) {
-    if (value !== undefined) {
-      params.append(name, String(value));
+    if (value === undefined) {
+      continue;
+    }
+    for (const item of Array.isArray(value) ? value : [value]) {
+      params.append(name, String(item));
     }
   }
   const search = params.toString();

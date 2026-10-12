@@ -1,0 +1,38 @@
+@use "../styles/variables" as *;
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-3 $space-4;
+  align-items: flex-end;
+  margin-bottom: $space-6;
+
+  > label:not(.checkbox) {
+    display: flex;
+    flex-direction: column;
+    gap: $space-1;
+    font-weight: 600;
+  }
+
+  input[type="search"],
+  select {
+    font: inherit;
+    font-weight: normal;
+    padding: $space-1 $space-2;
+    color: $color-text;
+    background: $color-background;
+    border: 1px solid $color-border;
+    border-radius: $radius;
+  }
+
+  input[type="search"] {
+    min-width: 16rem;
+  }
+}
+
+.checkbox {
+  display: flex;
+  gap: $space-2;
+  align-items: center;
+  padding: $space-1 0;
+}

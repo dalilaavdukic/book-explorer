@@ -1,0 +1,77 @@
+@use "../styles/variables" as *;
+
+.authorFilter {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.label {
+  font-weight: 600;
+}
+
+.field {
+  display: flex;
+  gap: $space-2;
+
+  input {
+    min-width: 14rem;
+    font: inherit;
+    padding: $space-1 $space-2;
+    color: $color-text;
+    background: $color-background;
+    border: 1px solid $color-border;
+    border-radius: $radius;
+  }
+}
+
+.options,
+.status {
+  position: absolute;
+  z-index: 1;
+  top: 100%;
+  left: 0;
+  min-width: 100%;
+  margin: $space-1 0 0;
+  background: $color-background;
+  border: 1px solid $color-border;
+  border-radius: $radius;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
+}
+
+.options {
+  padding: $space-1 0;
+  list-style: none;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.option {
+  padding: $space-1 $space-3;
+  cursor: pointer;
+
+  &:hover,
+  &[aria-selected="true"] {
+    background: $color-surface;
+  }
+
+  &[aria-selected="true"] {
+    outline: 2px solid $color-accent;
+    outline-offset: -2px;
+  }
+}
+
+.status {
+  padding: $space-2 $space-3;
+  color: $color-muted;
+
+  // Kept in the accessibility tree, so later messages are announced.
+  &:empty {
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+  }
+}

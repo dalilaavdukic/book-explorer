@@ -12,6 +12,9 @@ HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
   this.open = false;
 };
 
+// jsdom doesn't implement scrolling, and Layout scrolls on every new page.
+window.scrollTo = () => {};
+
 // MSW's "error" strategy only makes fetch reject, which the app shows as an
 // ordinary error state, so unhandled requests are collected and fail the test.
 const unhandledRequests: string[] = [];

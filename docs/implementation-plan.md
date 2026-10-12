@@ -1,6 +1,6 @@
 # Book Explorer: Implementation Plan
 
-*Living document, last updated 2026-10-12 (Phase 4). Employer requirements: `Development_Take-Home_Assignment.md`. Product requirements: `docs/spec.md`. Technical design: `docs/architecture.md`.*
+*Living document, last updated 2026-10-12 (Phase 5). Employer requirements: `Development_Take-Home_Assignment.md`. Product requirements: `docs/spec.md`. Technical design: `docs/architecture.md`.*
 
 ## 1. Purpose and how this plan is used
 
@@ -43,7 +43,7 @@ The checkpoint isn't a separate phase. It has no detailed plan or formal approva
 | 2 Book discovery | Complete, approved 2026-10-11 |
 | 3 Authentication | Complete, approved 2026-10-11 |
 | 4 User-specific notes | Complete, approved 2026-10-12 |
-| 5 Search, filtering and sorting | Not started |
+| 5 Search, filtering and sorting | Complete, approved 2026-10-12 |
 | 6 Final integration and delivery | Not started |
 
 ## 2. Phases at a glance
