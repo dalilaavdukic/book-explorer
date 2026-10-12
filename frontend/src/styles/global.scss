@@ -116,8 +116,8 @@ h3 {
   @include focus-ring;
 }
 
-// A heading takes focus only so a screen reader announces the new page
-// (Layout). It isn't a control, so it shows no ring.
-h1[tabindex="-1"]:focus-visible {
+// A heading takes focus only so a screen reader announces the new page or the
+// new page of a list. It isn't a control, so it shows no ring.
+:is(h1, h2)[tabindex="-1"]:focus-visible {
   outline: none;
 }

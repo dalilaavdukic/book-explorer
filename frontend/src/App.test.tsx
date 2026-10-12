@@ -441,7 +441,7 @@ test("opening a book moves focus to its title, and Back to books to the list's h
   await waitFor(() => expect(heading).toHaveFocus());
 });
 
-test("a filter or page change doesn't move focus to the heading", async () => {
+test("a filter change keeps focus on its control, and a page change moves it to the heading", async () => {
   serveBooks([nineteenEightyFour], 30);
   const { location } = renderApp("/");
   await screen.findByRole("link", { name: "Nineteen Eighty-Four" });
@@ -455,8 +455,12 @@ test("a filter or page change doesn't move focus to the heading", async () => {
 
   expect(screen.getByRole("button", { name: "Descending" })).toHaveFocus();
 
-  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  expect(heading).not.toHaveFocus();
+
+  const next = screen.getByRole("button", { name: "Next" });
+  next.focus();
+  fireEvent.click(next);
   await screen.findByText("Page 2 of 3");
 
-  expect(heading).not.toHaveFocus();
+  expect(heading).toHaveFocus();
 });

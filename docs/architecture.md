@@ -1,6 +1,6 @@
 # Book Explorer: Architecture
 
-*Living document, last updated 2026-10-12 (Phase 7, file rule wording). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
+*Living document, last updated 2026-10-12 (Phase 7, focus after a page change). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
 
 ## 1. Purpose and status
 
@@ -623,7 +623,8 @@ Rejected alternatives:
   - **Not on the first load,** and not when only the search changes (filters, sort, page), which would pull focus from the control in use.
   - **A page still loading** gets focus on its heading once the heading appears, unless the reader has moved focus meanwhile.
   - **Without scrolling** (`preventScroll`). `focus()` scrolls its element into view by default, which on Back and Forward would undo the browser's scroll restoration that J1 relies on. A new page is already at the top.
-  - **No ring on the heading.** `global.scss` removes the `:focus-visible` ring from a focused `h1[tabindex="-1"]`: it isn't a control, and a ring would make it look like one. The next Tab continues from it.
+  - **A page change in a list** moves focus to that list's heading: "Books" for the book list, "Your notes" for a book's notes. While the next page loads, "Loading…" replaces the pager, so the focused Next or Previous button would disappear and focus would fall to the page. The notes heading is scrolled into view, since the pager sits at the bottom of a long list.
+  - **No ring on the heading.** `global.scss` removes the `:focus-visible` ring from a focused `h1` or `h2` with `tabindex="-1"`: it isn't a control, and a ring would make it look like one. The next Tab continues from it.
 - **Sticky header:**
   - The header is `position: sticky` and keeps one fixed height (3.5rem). It never wraps: the username shrinks with an ellipsis instead.
   - `scroll-padding-top` on `html` is the header's height plus 2rem. An element that takes focus or is scrolled to therefore stops below the header, with room for a card's padding and focus ring (WCAG 2.4.11, technique C43).
