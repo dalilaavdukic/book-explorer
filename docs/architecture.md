@@ -74,6 +74,7 @@ backend/
   - Each record names its logger and level. One about a request also gets its method and user (`[GET, user 3]`, `[GET, anonymous]`) from a filter in `config/logging.py`. Django already adds the path and, for a 500, the traceback.
   - `django.request` logs at `ERROR`: crashes are logged, and the `WARNING` Django writes for every 4xx isn't. runserver's own request lines already show every status in development, and the test suite would otherwise print one line per expected 400, 401 and 404.
   - Request bodies, query strings in error records, and cookies are never logged, so passwords, note text, session ids and CSRF tokens stay out of the log.
+  - **Requests Django refuses as suspicious** (a `Host` outside `ALLOWED_HOSTS`, a body over 2.5 MB, more than 1,000 fields) are logged by `django.security` at `ERROR` with a traceback, as Django intends, and answered with a JSON 400 (§7.3). They're rare locally; a deployment facing scanners would tune this logger (§10).
 - **DRF defaults.**
   - Authentication uses the custom session class (§6.5).
   - The default permission is `IsAuthenticated`, and catalog views explicitly allow public access (§6.6).
