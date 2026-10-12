@@ -1,7 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { act, render } from "@testing-library/react";
 import { delay, http, HttpResponse } from "msw";
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import {
   type Location,
   MemoryRouter,
@@ -30,13 +30,16 @@ interface RouterState {
   navigate: NavigateFunction;
 }
 
-/** Reports the router's state to the test after every navigation. */
+/**
+ * Reports the router's state as React commits each navigation, so a test never
+ * sees a page before its location.
+ */
 // eslint-disable-next-line react-refresh/only-export-components -- a test helper, never hot-reloaded
 function RouterProbe({ report }: { report: (state: RouterState) => void }) {
   const location = useLocation();
   const navigationType = useNavigationType();
   const navigate = useNavigate();
-  useEffect(() => {
+  useLayoutEffect(() => {
     report({ location, navigationType, navigate });
   }, [report, location, navigationType, navigate]);
   return null;

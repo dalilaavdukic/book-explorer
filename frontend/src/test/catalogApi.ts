@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 import type { Book, BookDetail, PaginatedBookList } from "../api/books.ts";
+import type { Genre } from "../api/genres.ts";
 import { server } from "./server.ts";
 
 /** A book with its own id and title, and everything else shared. */
@@ -41,4 +42,14 @@ export function serveBooks(
     }),
   );
   return requests;
+}
+
+export const genres: Genre[] = [
+  { id: 2, name: "Dystopian" },
+  { id: 5, name: "Fantasy" },
+  { id: 9, name: "Science Fiction" },
+];
+
+export function serveGenres() {
+  server.use(http.get("/api/genres/", () => HttpResponse.json(genres)));
 }

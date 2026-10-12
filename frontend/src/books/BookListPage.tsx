@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ApiError } from "../api/client.ts";
 import EmptyState from "../components/EmptyState.tsx";
@@ -5,6 +6,7 @@ import ErrorState from "../components/ErrorState.tsx";
 import LoadingState from "../components/LoadingState.tsx";
 import NotFound from "../components/NotFound.tsx";
 import Pagination from "../components/Pagination.tsx";
+import BookFilters from "./BookFilters.tsx";
 import styles from "./BookListPage.module.scss";
 import {
   BOOKS_PAGE_SIZE,
@@ -34,6 +36,14 @@ interface BookResultsProps {
 
 function BookResults({ params, listUrl }: BookResultsProps) {
   const { data, error, isPending, isError, refetch } = useBookList(params);
+  const [searchBoxKey, setSearchBoxKey] = useState(0);
+
+  // Also empties the search box and cancels its pending write, even when the
+  // URL has no search yet.
+  const clearAll = () => {
+    listUrl.clearAll();
+    setSearchBoxKey((key) => key + 1);
+  };
 
   if (isError && error instanceof ApiError) {
     if (error.status === 400) {
@@ -55,7 +65,7 @@ function BookResults({ params, listUrl }: BookResultsProps) {
       />
     );
   } else if (data.count === 0) {
-    content = <NoResults params={params} onClearAll={listUrl.clearAll} />;
+    content = <NoResults params={params} onClearAll={clearAll} />;
   } else {
     content = (
       <>
@@ -92,6 +102,12 @@ function BookResults({ params, listUrl }: BookResultsProps) {
   return (
     <>
       <h1>Books</h1>
+      <BookFilters
+        params={params}
+        listUrl={listUrl}
+        searchBoxKey={searchBoxKey}
+        onClearAll={clearAll}
+      />
       {content}
     </>
   );

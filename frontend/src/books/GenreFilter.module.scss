@@ -1,0 +1,42 @@
+@use "../styles/variables" as *;
+
+.genreFilter {
+  position: relative;
+}
+
+.panel {
+  position: absolute;
+  z-index: 1;
+  top: calc(100% + #{$space-1});
+  left: 0;
+  min-width: 14rem;
+  padding: $space-3;
+  background: $color-background;
+  border: 1px solid $color-border;
+  border-radius: $radius;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+.legend {
+  margin-bottom: $space-1;
+  font-weight: 600;
+}
+
+.option {
+  display: flex;
+  gap: $space-2;
+  align-items: center;
+}

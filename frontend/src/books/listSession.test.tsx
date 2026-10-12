@@ -129,7 +129,8 @@ test("after a 401, the public list replaces the reader's, and the next reader se
   expect(
     await screen.findByRole("link", { name: "Public book 1" }),
   ).toBeInTheDocument();
-  expect(location().search).toBe("");
+  // The list uses the cleaned URL at once; the router commits it in a transition.
+  await waitFor(() => expect(location().search).toBe(""));
   expect(screen.getByRole("link", { name: "Log in" })).toBeInTheDocument();
   expect(aliceTextOnScreen()).toEqual([]);
 
@@ -213,7 +214,7 @@ test("logging out on a has_notes list shows the public list at once, and logging
       "page=1&page_size=12",
     ]),
   );
-  expect(location().search).toBe("");
+  await waitFor(() => expect(location().search).toBe(""));
   expect(
     screen.getByRole("link", { name: "Public book 1" }),
   ).toBeInTheDocument();

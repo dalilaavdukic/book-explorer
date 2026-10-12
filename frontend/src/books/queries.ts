@@ -10,6 +10,7 @@ import {
   fetchBooks,
   type PaginatedBookList,
 } from "../api/books.ts";
+import { fetchGenres } from "../api/genres.ts";
 import { privateQueryOptions, useAuth } from "../auth/session.ts";
 import { BOOKS_PAGE_SIZE, type BookListState } from "./listState.ts";
 
@@ -49,5 +50,12 @@ export function useBook(id: number) {
   return useQuery({
     queryKey: bookKeys.detail(id),
     queryFn: ({ signal }) => fetchBook(id, signal),
+  });
+}
+
+export function useGenres() {
+  return useQuery({
+    queryKey: ["genres"],
+    queryFn: ({ signal }) => fetchGenres(signal),
   });
 }
