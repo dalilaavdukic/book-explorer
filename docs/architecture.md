@@ -1,6 +1,6 @@
 # Book Explorer: Architecture
 
-*Living document, last updated 2026-10-12 (Phase 6). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
+*Living document, last updated 2026-10-12 (Phase 7, frontend file rule). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
 
 ## 1. Purpose and status
 
@@ -432,6 +432,12 @@ frontend/src/
 ├── styles/       _variables.scss, _mixins.scss, global.scss
 └── App.tsx, main.tsx
 ```
+
+**Where code goes:**
+- **Components:** one exported component per file, named after it, with its `.module.scss` beside it. Private sub-components used only by that component may live in its file. The one exception is `components/icons.tsx`, which exports the set of inline SVG icons.
+- **Hooks, helpers and types:** they live beside their only user. Once two or more modules use one, it moves to its own file, or to the module of its concern, in the feature folder.
+- **Modules grouped by concern:** a feature's query keys and query hooks live together in `<feature>/queries.ts`. Each resource's API functions, and the types it takes from the generated schema, live in `api/<resource>.ts`. Session state lives in `auth/session.ts` (§8.5), and the list state in `books/listState.ts` (§8.7).
+- **Folders:** by feature (`auth`, `books`, `notes`), with shared UI in `components`, the API layer in `api`, styles in `styles` and test utilities in `test`. Tests sit beside the module they test.
 
 | Route | View |
 |---|---|

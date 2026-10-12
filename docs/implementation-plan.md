@@ -1,6 +1,6 @@
 # Book Explorer: Implementation Plan
 
-*Living document, last updated 2026-10-12 (Phase 7, solution assessment, added). Employer requirements: `Development_Take-Home_Assignment.md`. Product requirements: `docs/spec.md`. Technical design: `docs/architecture.md`.*
+*Living document, last updated 2026-10-12 (Phase 7 decisions recorded). Employer requirements: `Development_Take-Home_Assignment.md`. Product requirements: `docs/spec.md`. Technical design: `docs/architecture.md`.*
 
 ## 1. Purpose and how this plan is used
 
@@ -45,7 +45,7 @@ The checkpoint isn't a separate phase. It has no detailed plan or formal approva
 | 4 User-specific notes | Complete, approved 2026-10-12 |
 | 5 Search, filtering and sorting | Complete, approved 2026-10-12 |
 | 6 Visual design | Complete, approved 2026-10-12 |
-| 7 Final integration and delivery | Not started |
+| 7 Final integration and delivery | In progress |
 
 ## 2. Phases at a glance
 
@@ -644,7 +644,7 @@ A phase is done when all of the following hold, in addition to the phase-specifi
      - **Backend:** every failure gives a consistent, documented error response. Unexpected errors are logged with enough context to diagnose them, through a deliberate logging configuration. Nothing private, such as passwords or note text, is logged.
      - **Frontend:** no uncaught error blanks the screen. Failed requests show a recoverable error state, and unexpected errors are caught and reported in one place.
    - **Structure**, in both, against the recommended layout for Django and DRF and for a React, Vite and TypeScript app.
-     - In the frontend, each module sits in the right file: one component per file, and each hook, helper and type either in its own file or beside its only user, by a stated rule.
+     - In the frontend, each module sits in the right file: one exported component per file, and each hook, helper and type either in its own file or beside its only user, by the rule in architecture §8.2.
    - **Method:**
      - an independent, read-only `solution-assessor` agent, run by the user with `/assess-solution` in a fresh context
      - active probes against the running backend: malformed and hostile input, query counts, concurrent edits, and `manage.py check --deploy`
@@ -652,6 +652,7 @@ A phase is done when all of the following hold, in addition to the phase-specifi
    - **Findings** are verified, ranked and proposed, and the user decides which are fixed. A fix that changes behaviour comes with a test.
    - **The report stays local,** in `.claude/plans/phase-7-assessment.md`, untracked. It isn't committed, and the README doesn't refer to it. The `/assess-solution` command is listed in the README with the other project commands.
 2. **Core acceptance.**
+   - Review the code of the assessment's fixes first (`/review-phase-code 7`), so the checklist verifies, and the tag marks, code that no later review fix changes. A second review at the end covers AC-X2 and the docs.
    - Write `docs/acceptance-checklist.md`. It covers J1–J10 and every core acceptance criterion, including the two-tab AC-A8 cases.
    - Verify each item with the method suited to it (§4, §7). Playwright MCP alone doesn't verify the checklist:
      - **backend tests:** authorization, validation, database integrity and API behaviour
@@ -664,7 +665,8 @@ A phase is done when all of the following hold, in addition to the phase-specifi
    - Commit and tag the core, so a submittable version exists before any optional work.
 3. **Enhancements (optional).** Start only after step 2 passes. Each one can be dropped on its own.
    - **AC-X2 first:** the author link on the detail page.
-   - **Then AC-X1, per-reader note counts:**
+   - **AC-X1 isn't built** (decided 2026-10-12). Had it been, it would have come next:
+   - **AC-X1, per-reader note counts:**
      - every book list a reader fetches becomes private
      - the counts are computed in the list query
      - the public-or-private key decision from Phase 5 changes
@@ -676,16 +678,17 @@ A phase is done when all of the following hold, in addition to the phase-specifi
      - the draft-loss tradeoff (spec §6)
      - known limitations
      - the coverage report
+     - the Windows (PowerShell) and macOS equivalent of every command that differs
      - development-only warnings
      - Swagger UI
      - how acceptance was verified
    - **Docs match what was built:** confirm that the spec, architecture and this plan describe the finished app.
    - **Clean clone:** follow the README word for word from a fresh clone.
-   - **Submit:** get CI green on the final commit, push, and give reviewers access.
+   - **Submit:** get CI green on the final commit, push, and make the repository public.
 
 **Depends on.** Phases 1–6.
 
-**Acceptance criteria.** All of them, verified end to end. AC-M4 and AC-U4 in their final form. AC-X1 and AC-X2 if built.
+**Acceptance criteria.** All of them, verified end to end. AC-M4 and AC-U4 in their final form. AC-X2; AC-X1 isn't built.
 
 **Done when**
 
@@ -693,7 +696,7 @@ A phase is done when all of the following hold, in addition to the phase-specifi
 - The checklist passes, and its results, methods and any outstanding limitations are recorded.
 - A clean clone works exactly as the README describes.
 - CI is green on the final commit.
-- The repository is pushed and reviewers can access it.
+- The repository is pushed and made public.
 
 ## 6. Cross-phase dependencies
 
@@ -756,7 +759,7 @@ Where a criterion spans phases, it is finished in the last phase listed.
 | AC-S6, AC-S9 | 5 | FE |
 | AC-S7 | 5 | Browser |
 | AC-S10 | 5 | BE, FE, Browser |
-| AC-X1 (optional) | 7 | BE (query count), FE, Browser |
+| AC-X1 (optional) | 7 | Not built (decided 2026-10-12) |
 | AC-X2 (optional) | 7 | Browser |
 
 **User journeys**
@@ -793,7 +796,7 @@ Every journey is walked through end to end in Phase 7.
 
 | ID | Decision | Why |
 |---|---|---|
-| D1 | A private GitHub repository with GitHub Actions from Phase 1, including the schema and type drift checks. Every phase is approved on a green CI run. In Phase 7 the repository is shared with reviewers or made public. | Clean-machine problems (a missing pin, a forgotten migration, stale types) show up in the phase that causes them, not at submission |
+| D1 | A private GitHub repository with GitHub Actions from Phase 1, including the schema and type drift checks. Every phase is approved on a green CI run. In Phase 7 the repository is made public. | Clean-machine problems (a missing pin, a forgotten migration, stale types) show up in the phase that causes them, not at submission |
 | D2 | Phases 4 and 5 each have one detailed plan and one approval. Each includes a lightweight backend checkpoint before any UI work: a focused review, then fixes and a commit. The checkpoint has no plan or approval of its own (§1). | Authorization and query correctness are reviewed before UI is built on them, without turning each phase into two |
 | D3 | Enhancements are an optional step in Phase 7, after the core checklist passes and the core is tagged. AC-X2 comes before AC-X1. | A submittable core exists before any optional work. AC-X1 goes last because it changes the private-data boundary. |
 | D4 | In each phase and in the Phase 7 checklist, Claude Code verifies the applicable user-facing acceptance criteria through Playwright MCP whenever technically possible, and records the results. The user also tests by hand, especially usability, visual polish and scenarios flagged as not reliably verifiable by automation. A tooling limitation is flagged, never treated as a blocker. | User-facing behaviour is checked in a real browser without maintaining an end-to-end suite, and people cover what automation can't judge |
@@ -822,7 +825,8 @@ Left open on purpose. Each item is decided in the detailed plan for the phase na
   - The type scale, shadows and tints are in `styles/_variables.scss`, and their contrast ratios in architecture §8.8.
   - The shared mixins live in `styles/_mixins.scss`. A component chooses a button style by including a variant in its own module class (architecture §8.8).
   - The restyled sort `<select>` wasn't kept. The sort is a field `<select>` and a direction button (§5.6, architecture §8.8 and §10).
-- **Phase 7:**
-  - the assessment's rubric, the `solution-assessor` agent and its command, and the probes run against the backend
-  - the format of the acceptance checklist
-  - whether the repository is made public or shared privately with reviewers
+- **Phase 7:** settled.
+  - The read-only `solution-assessor` agent (`.claude/agents/`) holds the assessment's rubric. The user runs it with `/assess-solution`, in a fresh context.
+  - The probes run against throwaway copies of the backend and its database, never the dev database: hostile input, authorization and sessions, concurrent edits, query counts, error responses and logging, `check --deploy`, and headers and cookies.
+  - The acceptance checklist has one table per spec section, each criterion with its method, evidence and result, followed by the journeys, the edge cases and the other core items.
+  - The repository is made public at submission.
