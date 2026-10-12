@@ -1,4 +1,5 @@
 import { useAuth } from "../auth/session.ts";
+import AuthorFilter from "./AuthorFilter.tsx";
 import styles from "./BookFilters.module.scss";
 import GenreFilter from "./GenreFilter.tsx";
 import {
@@ -37,6 +38,7 @@ export default function BookFilters({
         search={params.search}
         onSearch={listUrl.setSearch}
       />
+      <AuthorFilter author={params.author} onChange={listUrl.setAuthor} />
       <GenreFilter selected={params.genre} onChange={listUrl.setGenres} />
       <label>
         Sort by

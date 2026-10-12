@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import type { Author } from "../api/authors.ts";
 import type { Book, BookDetail, PaginatedBookList } from "../api/books.ts";
 import type { Genre } from "../api/genres.ts";
 import { server } from "./server.ts";
@@ -52,4 +53,37 @@ export const genres: Genre[] = [
 
 export function serveGenres() {
   server.use(http.get("/api/genres/", () => HttpResponse.json(genres)));
+}
+
+/** Answers each author's detail from `authors`. Returns each id requested. */
+export function serveAuthors(authors: Author[]) {
+  const requests: number[] = [];
+  server.use(
+    http.get<{ id: string }>("/api/authors/:id/", ({ params }) => {
+      requests.push(Number(params.id));
+      const author = authors.find(({ id }) => id === Number(params.id));
+      return author
+        ? HttpResponse.json(author)
+        : HttpResponse.json(
+            { detail: "No Author matches the given query." },
+            { status: 404 },
+          );
+    }),
+  );
+  return requests;
+}
+
+/**
+ * Answers every author suggestion request with `results`, in that order.
+ * Returns each request's query string.
+ */
+export function serveAuthorSuggestions(results: Author[]) {
+  const requests: string[] = [];
+  server.use(
+    http.get("/api/authors/", ({ request }) => {
+      requests.push(new URL(request.url).searchParams.toString());
+      return HttpResponse.json(results);
+    }),
+  );
+  return requests;
 }

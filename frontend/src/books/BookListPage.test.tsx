@@ -4,6 +4,7 @@ import type { User } from "../api/auth.ts";
 import type { BookDetail } from "../api/books.ts";
 import {
   makeBook,
+  serveAuthors,
   serveBook,
   serveBooks,
   serveGenres,
@@ -14,6 +15,7 @@ import { renderApp } from "../test/renderApp.tsx";
 const alice: User = { id: 1, username: "alice" };
 
 const hobbit = makeBook(3, "The Hobbit");
+const herbert = { id: 3, name: "Frank Herbert" };
 
 const INVALID_FILTERS = "This link contains invalid filters";
 
@@ -62,6 +64,7 @@ test("a malformed filter in the link shows invalid filters without a request", a
 
 test("a filter the API rejects shows the same view, whose Clear all starts over", async () => {
   const requests = serveBooks([hobbit]);
+  serveAuthors([]);
   failNext("get", "/api/books/", 400, {
     author: [
       "Select a valid choice. That choice is not one of the available choices.",
@@ -82,6 +85,7 @@ test("no match shows the empty state, and Clear all keeps only the sort", async 
   const requests = serveBooks((params) =>
     params.has("search") ? [] : [hobbit],
   );
+  serveAuthors([herbert]);
   const { location, navigationType } = renderApp(
     "/?search=zzz&author=3&genre=5&genre=2&sort=-year",
   );
@@ -320,17 +324,21 @@ test("a reader turning on Books with my notes lists their noted books from page 
 
 test("Clear all keeps only the sort and empties the search box", async () => {
   serveBooks([hobbit]);
+  serveAuthors([herbert]);
   const { location } = renderApp(
     "/?search=hobbit&author=3&genre=2&has_notes=true&sort=-year&page=2",
     { user: alice },
   );
   await screen.findByRole("link", { name: "The Hobbit" });
+  const author = screen.getByRole("combobox", { name: "Author" });
+  await waitFor(() => expect(author).toHaveValue("Frank Herbert"));
   expect(searchBox()).toHaveValue("hobbit");
 
   fireEvent.click(filters().getByRole("button", { name: "Clear all" }));
 
   await waitFor(() => expect(location().search).toBe("?sort=-year"));
   expect(searchBox()).toHaveValue("");
+  expect(author).toHaveValue("");
   expect(filters().queryByRole("button", { name: "Clear all" })).toBeNull();
 });
 
