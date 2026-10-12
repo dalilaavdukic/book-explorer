@@ -17,10 +17,10 @@ def note_url(note_id):
     return f"/api/notes/{note_id}/"
 
 
-def send(client, method, url, data=None):
+def send(client, method, url, data=None, headers=None):
     if method in ("post", "patch"):
-        return getattr(client, method)(url, data or {}, format="json")
-    return getattr(client, method)(url)
+        return getattr(client, method)(url, data or {}, format="json", headers=headers)
+    return getattr(client, method)(url, headers=headers)
 
 
 def stored(note):
@@ -186,6 +186,73 @@ class NoteOwnershipTests(NotesAuthorizationTestCase):
                     self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
+class ReaderCheckTests(NotesAuthorizationTestCase):
+    """A tab names the reader it shows; the session may since be another's."""
+
+    def own_requests(self):
+        return [
+            ("get", notes_url(self.book.pk), status.HTTP_200_OK),
+            ("post", notes_url(self.book.pk), status.HTTP_201_CREATED),
+            ("get", note_url(self.bobs_note.pk), status.HTTP_200_OK),
+            ("patch", note_url(self.bobs_note.pk), status.HTTP_200_OK),
+            ("delete", note_url(self.bobs_note.pk), status.HTTP_204_NO_CONTENT),
+        ]
+
+    def test_requests_for_another_reader_are_refused_and_change_nothing(self):
+        before = stored(self.bobs_note)
+        self.client.force_login(self.bob)
+
+        for reader in (str(self.alice.pk), "abc", ""):
+            for method, url, _ in self.own_requests():
+                with self.subTest(reader=reader, method=method, url=url):
+                    response = send(
+                        self.client,
+                        method,
+                        url,
+                        {"body": "Alice's private thought."},
+                        {"X-Reader-Id": reader},
+                    )
+
+                    self.assertEqual(
+                        response.status_code, status.HTTP_412_PRECONDITION_FAILED
+                    )
+                    self.assertEqual(
+                        response.json(),
+                        {"detail": "The session belongs to another reader."},
+                    )
+
+        self.assertEqual(Note.objects.count(), 2)
+        self.assertEqual(stored(self.bobs_note), before)
+
+    def test_requests_for_the_session_reader_succeed(self):
+        self.client.force_login(self.bob)
+
+        for method, url, expected in self.own_requests():
+            with self.subTest(method=method, url=url):
+                response = send(
+                    self.client,
+                    method,
+                    url,
+                    {"body": "Bob's thought."},
+                    {"X-Reader-Id": str(self.bob.pk)},
+                )
+
+                self.assertEqual(response.status_code, expected)
+
+    def test_visitor_naming_a_reader_still_gets_401(self):
+        for method, url, _ in self.own_requests():
+            with self.subTest(method=method, url=url):
+                response = send(
+                    self.client,
+                    method,
+                    url,
+                    {"body": "A visitor's."},
+                    {"X-Reader-Id": str(self.bob.pk)},
+                )
+
+                self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
 class NoteSessionSecurityTests(AuthTestCase):
     @classmethod
     def setUpTestData(cls):
@@ -210,6 +277,20 @@ class NoteSessionSecurityTests(AuthTestCase):
 
         self.assertEqual(Note.objects.count(), 1)
         self.assertEqual(stored(note), before)
+
+    def test_csrf_is_checked_before_the_reader(self):
+        self.log_in()
+
+        response = send(
+            self.client,
+            "post",
+            notes_url(self.book.pk),
+            {"body": "Forged."},
+            {"X-Reader-Id": str(self.alice.pk + 1)},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(response.json()["detail"].startswith("CSRF Failed"))
 
     def test_writes_with_the_csrf_token_succeed(self):
         self.log_in()

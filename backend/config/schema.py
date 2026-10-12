@@ -1,8 +1,15 @@
-"""Error responses for the OpenAPI schema, in DRF's shapes (arch §7.3)."""
+"""Error responses for the OpenAPI schema, in DRF's shapes (arch §7.3), and the
+reader header that private operations share."""
 
 from drf_spectacular.extensions import OpenApiSerializerExtension
-from drf_spectacular.utils import OpenApiResponse, PolymorphicProxySerializer
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    PolymorphicProxySerializer,
+)
 from rest_framework import serializers
+
+from accounts.authentication import READER_HEADER
 
 
 class DetailSerializer(serializers.Serializer):
@@ -47,3 +54,15 @@ def invalid_body(description):
 
 NOT_LOGGED_IN = detail_error("Not logged in.")
 CSRF_FAILED = detail_error("The CSRF token is missing or wrong.")
+READER_CHANGED = detail_error(
+    f"The session's reader isn't the one `{READER_HEADER}` names."
+)
+
+READER = OpenApiParameter(
+    READER_HEADER,
+    int,
+    OpenApiParameter.HEADER,
+    description="The id of the reader the client shows as logged in. If the "
+    "session belongs to another reader, the request is refused with 412. "
+    "Without it, nothing is checked.",
+)

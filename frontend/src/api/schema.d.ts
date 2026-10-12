@@ -451,7 +451,10 @@ export interface operations {
                  */
                 sort?: "-author" | "-title" | "-year" | "author" | "title" | "year";
             };
-            header?: never;
+            header?: {
+                /** @description The id of the reader the client shows as logged in. If the session belongs to another reader, the request is refused with 412. Without it, nothing is checked. */
+                "X-Reader-Id"?: number;
+            };
             path?: never;
             cookie?: never;
         };
@@ -492,6 +495,15 @@ export interface operations {
                     "application/json": components["schemas"]["Detail"];
                 };
             };
+            /** @description The session's reader isn't the one `X-Reader-Id` names. */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Detail"];
+                };
+            };
         };
     };
     books_notes_list: {
@@ -502,7 +514,10 @@ export interface operations {
                 /** @description Number of results to return per page. */
                 page_size?: number;
             };
-            header?: never;
+            header?: {
+                /** @description The id of the reader the client shows as logged in. If the session belongs to another reader, the request is refused with 412. Without it, nothing is checked. */
+                "X-Reader-Id"?: number;
+            };
             path: {
                 book_id: number;
             };
@@ -545,12 +560,24 @@ export interface operations {
                     "application/json": components["schemas"]["Detail"];
                 };
             };
+            /** @description The session's reader isn't the one `X-Reader-Id` names. */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Detail"];
+                };
+            };
         };
     };
     books_notes_create: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The id of the reader the client shows as logged in. If the session belongs to another reader, the request is refused with 412. Without it, nothing is checked. */
+                "X-Reader-Id"?: number;
+            };
             path: {
                 book_id: number;
             };
@@ -599,6 +626,15 @@ export interface operations {
             };
             /** @description No such book. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Detail"];
+                };
+            };
+            /** @description The session's reader isn't the one `X-Reader-Id` names. */
+            412: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -660,7 +696,10 @@ export interface operations {
     notes_retrieve: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The id of the reader the client shows as logged in. If the session belongs to another reader, the request is refused with 412. Without it, nothing is checked. */
+                "X-Reader-Id"?: number;
+            };
             path: {
                 id: number;
             };
@@ -694,12 +733,24 @@ export interface operations {
                     "application/json": components["schemas"]["Detail"];
                 };
             };
+            /** @description The session's reader isn't the one `X-Reader-Id` names. */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Detail"];
+                };
+            };
         };
     };
     notes_destroy: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The id of the reader the client shows as logged in. If the session belongs to another reader, the request is refused with 412. Without it, nothing is checked. */
+                "X-Reader-Id"?: number;
+            };
             path: {
                 id: number;
             };
@@ -741,12 +792,24 @@ export interface operations {
                     "application/json": components["schemas"]["Detail"];
                 };
             };
+            /** @description The session's reader isn't the one `X-Reader-Id` names. */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Detail"];
+                };
+            };
         };
     };
     notes_partial_update: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The id of the reader the client shows as logged in. If the session belongs to another reader, the request is refused with 412. Without it, nothing is checked. */
+                "X-Reader-Id"?: number;
+            };
             path: {
                 id: number;
             };
@@ -795,6 +858,15 @@ export interface operations {
             };
             /** @description No such note among the reader's own. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Detail"];
+                };
+            };
+            /** @description The session's reader isn't the one `X-Reader-Id` names. */
+            412: {
                 headers: {
                     [name: string]: unknown;
                 };

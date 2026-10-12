@@ -8,6 +8,8 @@ from config.pagination import StrictPageNumberPagination
 from config.schema import (
     CSRF_FAILED,
     NOT_LOGGED_IN,
+    READER,
+    READER_CHANGED,
     detail_error,
     invalid_body,
     invalid_parameters,
@@ -29,6 +31,7 @@ class NotePagination(StrictPageNumberPagination):
 @extend_schema_view(
     get=extend_schema(
         tags=["notes"],
+        parameters=[READER],
         responses={
             status.HTTP_200_OK: NoteSerializer,
             status.HTTP_400_BAD_REQUEST: invalid_parameters("`page_size` is invalid."),
@@ -36,16 +39,19 @@ class NotePagination(StrictPageNumberPagination):
             status.HTTP_404_NOT_FOUND: detail_error(
                 "No such book, or the page is past the last one."
             ),
+            status.HTTP_412_PRECONDITION_FAILED: READER_CHANGED,
         },
     ),
     post=extend_schema(
         tags=["notes"],
+        parameters=[READER],
         responses={
             status.HTTP_201_CREATED: NoteSerializer,
             status.HTTP_400_BAD_REQUEST: INVALID_NOTE,
             status.HTTP_401_UNAUTHORIZED: NOT_LOGGED_IN,
             status.HTTP_403_FORBIDDEN: CSRF_FAILED,
             status.HTTP_404_NOT_FOUND: detail_error("No such book."),
+            status.HTTP_412_PRECONDITION_FAILED: READER_CHANGED,
         },
     ),
 )
@@ -73,28 +79,34 @@ class BookNoteListView(generics.ListCreateAPIView):
 
 @extend_schema_view(
     get=extend_schema(
+        parameters=[READER],
         responses={
             status.HTTP_200_OK: NoteSerializer,
             status.HTTP_401_UNAUTHORIZED: NOT_LOGGED_IN,
             status.HTTP_404_NOT_FOUND: NO_SUCH_NOTE,
-        }
+            status.HTTP_412_PRECONDITION_FAILED: READER_CHANGED,
+        },
     ),
     patch=extend_schema(
+        parameters=[READER],
         responses={
             status.HTTP_200_OK: NoteSerializer,
             status.HTTP_400_BAD_REQUEST: INVALID_NOTE,
             status.HTTP_401_UNAUTHORIZED: NOT_LOGGED_IN,
             status.HTTP_403_FORBIDDEN: CSRF_FAILED,
             status.HTTP_404_NOT_FOUND: NO_SUCH_NOTE,
-        }
+            status.HTTP_412_PRECONDITION_FAILED: READER_CHANGED,
+        },
     ),
     delete=extend_schema(
+        parameters=[READER],
         responses={
             status.HTTP_204_NO_CONTENT: None,
             status.HTTP_401_UNAUTHORIZED: NOT_LOGGED_IN,
             status.HTTP_403_FORBIDDEN: CSRF_FAILED,
             status.HTTP_404_NOT_FOUND: NO_SUCH_NOTE,
-        }
+            status.HTTP_412_PRECONDITION_FAILED: READER_CHANGED,
+        },
     ),
 )
 class NoteDetailView(generics.RetrieveUpdateDestroyAPIView):

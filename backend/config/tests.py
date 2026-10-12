@@ -322,7 +322,7 @@ class SchemaErrorResponseTests(SimpleTestCase):
 
     def test_each_operation_documents_its_error_responses(self):
         expected = {
-            ("/api/books/", "get"): {"200", "400", "401", "404"},
+            ("/api/books/", "get"): {"200", "400", "401", "404", "412"},
             ("/api/books/{id}/", "get"): {"200", "404"},
             ("/api/authors/", "get"): {"200", "400"},
             ("/api/authors/{id}/", "get"): {"200", "404"},
@@ -330,21 +330,48 @@ class SchemaErrorResponseTests(SimpleTestCase):
             ("/api/auth/session/", "get"): {"200"},
             ("/api/auth/login/", "post"): {"200", "400", "403"},
             ("/api/auth/logout/", "post"): {"204", "403"},
-            ("/api/books/{book_id}/notes/", "get"): {"200", "400", "401", "404"},
+            ("/api/books/{book_id}/notes/", "get"): {
+                "200",
+                "400",
+                "401",
+                "404",
+                "412",
+            },
             ("/api/books/{book_id}/notes/", "post"): {
                 "201",
                 "400",
                 "401",
                 "403",
                 "404",
+                "412",
             },
-            ("/api/notes/{id}/", "get"): {"200", "401", "404"},
-            ("/api/notes/{id}/", "patch"): {"200", "400", "401", "403", "404"},
-            ("/api/notes/{id}/", "delete"): {"204", "401", "403", "404"},
+            ("/api/notes/{id}/", "get"): {"200", "401", "404", "412"},
+            ("/api/notes/{id}/", "patch"): {"200", "400", "401", "403", "404", "412"},
+            ("/api/notes/{id}/", "delete"): {"204", "401", "403", "404", "412"},
         }
         for (path, method), codes in expected.items():
             with self.subTest(path=path, method=method):
                 self.assertEqual(set(self.paths[path][method]["responses"]), codes)
+
+    def test_private_operations_document_the_reader_header(self):
+        private = {
+            ("/api/books/", "get"),
+            ("/api/books/{book_id}/notes/", "get"),
+            ("/api/books/{book_id}/notes/", "post"),
+            ("/api/notes/{id}/", "get"),
+            ("/api/notes/{id}/", "patch"),
+            ("/api/notes/{id}/", "delete"),
+        }
+        for path, operations in self.paths.items():
+            for method, operation in operations.items():
+                with self.subTest(path=path, method=method):
+                    headers = {
+                        parameter["name"]
+                        for parameter in operation.get("parameters", [])
+                        if parameter["in"] == "header"
+                    }
+                    expected = {"X-Reader-Id"} if (path, method) in private else set()
+                    self.assertEqual(headers, expected)
 
     def test_page_size_and_search_document_their_bounds(self):
         def parameter(path, name):
