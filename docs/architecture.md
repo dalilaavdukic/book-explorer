@@ -583,7 +583,7 @@ Rejected alternatives:
   | white on danger / on danger hover | 6.6 / 8.7 |
   | white on ink / on-ink muted on ink | 13.0 / 8.7 |
   | control edge on white / paper / surface hover (needs 3) | 3.5 / 3.2 / 3.05 |
-  | accent focus ring on paper / white (needs 3) | 5.6 / 6.1 |
+  | accent focus ring on paper / white / danger tint (needs 3) | 5.6 / 6.1 / 5.4 |
   | mark focus ring on ink (needs 3) | 6.9 |
   | header button edge on ink (needs 3) | 8.7 |
 
@@ -595,7 +595,9 @@ Rejected alternatives:
 - **Sticky header:**
   - The header is `position: sticky` and keeps one fixed height (3.5rem). It never wraps: the username shrinks with an ellipsis instead.
   - `scroll-padding-top` on `html` is the header's height plus 2rem. An element that takes focus or is scrolled to therefore stops below the header, with room for a card's padding and focus ring (WCAG 2.4.11, technique C43).
-  - The logout error is positioned just under the bar, so the bar's height never changes. While the error shows, it covers the top of the content.
+  - The logout error is positioned just under the bar, so the bar's height never changes.
+    - While it shows, it covers the top of the content, so it has a × button named "Dismiss". Dismissing it moves focus to Log out, because the button goes away.
+    - That button's focus ring is teal, because the header's amber ring is 1.7:1 on the error's tint.
 - **Restyled native controls:**
   - **The `<select>`** has `appearance: none` and a chevron drawn as an SVG data URI.
   - **The search box's ×** is a data URI of the same × the author field shows. It exists only in Chrome and Safari; Firefox has none.

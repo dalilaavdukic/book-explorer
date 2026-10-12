@@ -95,17 +95,34 @@
   }
 }
 
-// Under the bar rather than in it, so the bar's height never changes.
+// Under the bar rather than in it, so the bar's height never changes. It
+// covers the top of the content, so it can be dismissed.
 .error {
   position: absolute;
   top: 100%;
   right: 0;
   left: 0;
-  margin: 0;
-  padding: $space-2 $space-4;
+  display: flex;
+  gap: $space-2;
+  align-items: center;
+  justify-content: center;
+  padding: $space-1 $space-4;
   font-weight: 600;
   color: $color-danger;
-  text-align: center;
   background: $color-danger-tint;
   border-bottom: 1px solid $color-danger;
+
+  p {
+    margin: 0;
+  }
+}
+
+.dismiss {
+  @include button-icon;
+  flex-shrink: 0;
+
+  // The header's amber ring is 1.7:1 on the danger tint; teal is 5.4:1.
+  &:focus-visible {
+    @include focus-ring;
+  }
 }
