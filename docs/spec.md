@@ -1,6 +1,6 @@
 # Book Explorer: Product Specification
 
-*Living document, last updated 2026-10-12 (Phase 7: AC-X2 built, AC-X1 not built). Requirements source:* `Development_Take-Home_Assignment.md`*. Technical design:* `docs/architecture.md`*.*
+*Living document, last updated 2026-10-13 (after Phase 7: how a tab notices another reader's login). Requirements source:* `Development_Take-Home_Assignment.md`*. Technical design:* `docs/architecture.md`*.*
 
 ## 1. Overview
 
@@ -278,7 +278,7 @@ AC-X2 was built in Phase 7. AC-X1 wasn't (decided 2026-10-12).
 **Handled**
 
 - **Note deleted in another tab, then edited or deleted here:** the reader is told the note no longer exists, and the notes list refreshes.
-- **Logout, or a different reader's login, in another tab:** this tab notices a logout on its next request that needs login (which fails) or when it regains focus and re-checks the session; it notices a different reader's login only on that re-check. It then switches to the logged-out state, or to the new reader, and clears the previous reader's notes and personalized results. An open draft is kept after a logout elsewhere, as after expiry (AC-N12), and discarded once a reader is detected as logged in (AC-A8).
+- **Logout, or a different reader's login, in another tab:** this tab notices either on its next request for private data, which the server refuses because the session no longer belongs to the reader the tab shows, or when it becomes visible again and re-checks the session. It then switches to the logged-out state, or to the new reader, and clears the previous reader's notes and personalized results. Until it notices, it can still show the previous reader's name, but it never shows the new reader's private data under that name or saves a note to their account. An open draft is kept after a logout elsewhere, as after expiry (AC-N12), and discarded once a reader is detected as logged in (AC-A8).
 - **Authentication expires while writing or editing a note:** handled as in J9 and AC-N12.
 - **Visitor opens a link that has "Books with my notes" turned on** (shared by someone else, or saved before logging out): the app removes `has_notes=true` and shows the public catalog without the control (AC-S3).
 - **Reader with no notes turns on "Books with my notes":** the empty state explains why nothing is shown.

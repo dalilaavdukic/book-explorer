@@ -197,7 +197,8 @@ A logged-in reader keeps private notes on each book, in a section under the book
 - Every notes query starts from the logged-in reader's own notes. Another reader's note is never found, so asking for it gets 404, exactly as a note that doesn't exist does. The API never reveals that it exists.
 - A note's owner comes from the session and its book from the URL. A `user` or `book` in the request body is ignored.
 - Without a login, every notes request gets 401. A write without the CSRF token gets 403.
-- In the browser, a reader's notes are cached under keys that include their id, and they're removed whenever the session ends or another reader logs in.
+- Each notes request names the reader the tab shows, in an `X-Reader-Id` header. If the session now belongs to someone else, because another reader has logged in in another tab, the request gets 412 and changes nothing, and the tab re-checks the session.
+- In the browser, a reader's notes are cached under keys that include their id, and they're removed as soon as the tab learns that the session ended or another reader logged in.
 
 **Paging after a change.** Adding a note goes to page 1, where the new note is first. Deleting the only note on the last page goes back a page. Otherwise the reader stays on the current page.
 
@@ -232,6 +233,7 @@ Above the book list are a search box, an author selector, a genre filter, the so
 **Books with my notes** is a personal list, so it needs a login:
 - Visitors don't see the control. A visitor who opens a link with `has_notes=true` gets the public catalog, and the parameter is removed from the URL.
 - Without a login, the API answers `has_notes=true` with 401. The reader always comes from the session, so no parameter can ask for another reader's books.
+- The request names the reader the tab shows, as notes requests do, so a tab that hasn't noticed another reader's login gets 412 rather than their books.
 - In the browser, these results are cached under the reader's id, like notes, and removed when the session ends or another reader logs in.
 
 **Invalid values.** A malformed value, such as `sort=banana` or `genre=abc`, or an author or genre that doesn't exist, gets a 400 from the API with a message for each bad parameter, never a server error. The app shows "This link contains invalid filters", whose "Clear all" link goes back to the full catalog. It recognizes a malformed value itself, without a request. Unknown parameter names, such as `utm_source`, are ignored.
@@ -301,7 +303,8 @@ Notes are the main feature, and search, filters and sorting the second. Each cho
 
 **Private data at authentication boundaries** (§8.5). On a shared browser, the next reader must never see the previous reader's notes, "Books with my notes" results or unsaved draft, even for a moment.
 - Every private cache entry sits under a `private` root and the reader's id. One call finds them all, and another reader's query can never be answered from them.
-- One function changes the session: on a login, a logout, any 401, and a re-check when the tab regains focus. Whenever the reader changes, it cancels private requests in flight and removes every private entry. Public catalog data stays cached.
+- One function changes the session: on a login, a logout, any 401, and a re-check after a 412 or when the tab becomes visible again. Whenever the reader changes, it cancels private requests in flight and removes every private entry. Public catalog data stays cached.
+- A tab may not know yet that another reader has logged in elsewhere. Its private requests name the reader it shows, and the server refuses them when the session belongs to someone else, so the tab never shows that reader's data, or saves a note to their account, under the old name.
 - A draft's fate depends on how the session ended. After an expiry or a logout in another tab, the open form keeps its text, so a note isn't lost. A logout in this tab, or any login, discards it.
 
 **Strict validation: a 400, never a silent fallback** (§7.5). An invalid value is refused with a message, never ignored or replaced with a default: `sort=banana`, a genre that doesn't exist, a page of `1.5`, a note body sent as a number. A fallback would quietly show something other than what the link asked for. Unknown parameter names are ignored, so tracking parameters don't break a link.
@@ -322,7 +325,7 @@ Notes are the main feature, and search, filters and sorting the second. Each cho
 - **An edit that brought a deleted note back.** Django's `save()` falls back to an INSERT when its UPDATE matches no row. A PATCH that loaded a note just before a DELETE committed therefore re-created it. A note now refuses to be saved once its row is gone, and the API answers with the missing-note 404.
 - **Deeply nested JSON.** Python's JSON decoder raises `RecursionError` on about 100 KB of `[`, which DRF doesn't catch, so it was a 500 on every write. A small parser subclass turns it into a 400.
 - **A one-frame flash.** React Router renders a location change as a React transition, so a control that reads the URL showed its old value for one frame after a click. jsdom can't show this, so it was measured in the browser frame by frame, and transitions are now off.
-- **Sessions across tabs.** Another reader logging in elsewhere causes no 401 in this tab, so the tab re-checks the session whenever it regains focus. An expiry and a logout elsewhere look the same from here, so both keep the draft; only a logout in this tab is known to be deliberate.
+- **Sessions across tabs.** Another reader logging in elsewhere causes no 401 in this tab. The tab re-checks the session when it becomes visible again, but two windows side by side never stop being visible, so one could show the new reader's notes under the old name and save a note into their account. Private requests now name the reader the tab shows, and the server answers a mismatch with 412, so the tab re-checks before showing or saving anything. An expiry and a logout elsewhere look the same from here, so both keep the draft; only a logout in this tab is known to be deliberate.
 
 ## Assumptions and decisions
 
@@ -363,7 +366,7 @@ The full lists are in [`docs/spec.md`](docs/spec.md): §2 for the product decisi
 - **Search doesn't ignore accents, and ignores case only for ASCII letters** with SQLite ([Search, filters and sorting](#search-filters-and-sorting)).
 - **Sorting doesn't skip leading articles,** so *The Hobbit* sorts under T.
 - **Login attempts aren't rate-limited.**
-- **A tab notices a login or logout in another tab only later:** on its next request that needs a login, or when it regains focus. The server always answers for the browser's current session, so a tab that hasn't noticed yet still can't reach data it shouldn't.
+- **A tab notices a login or logout in another tab only later:** on its next request for private data, or when it becomes visible again. Until then it can keep showing the previous reader's name and public data, but the server refuses its private requests, so it never shows or saves another reader's notes.
 - **Staff can read every note in Django admin.** Notes are private from other readers, not from administrators.
 - **A session lasts two weeks from login,** without renewal.
 - **Note counts on the list weren't built** (the optional enhancement AC-X1).
@@ -433,7 +436,7 @@ Every acceptance criterion in [`docs/spec.md`](docs/spec.md), every user journey
 - **Frontend tests:** the API client, the 401 rule, private data and drafts when the session changes, failed note changes, and URL state.
 - **Contract checks:** regenerating the schema and the types leaves no diff.
 - **Browser checks:** Claude Code drove Chrome through Playwright MCP against the running app, including two tabs, delayed and failing requests, and an expired session.
-- **Manual checks:** what automation can't do reliably, such as a tab noticing another tab's login or logout when it regains focus, and the look and feel.
+- **Manual checks:** what automation can't do reliably, such as a tab noticing another tab's login or logout when it becomes visible again, and the look and feel.
 
 The result for each criterion, with its method and evidence, is in [`docs/acceptance-checklist.md`](docs/acceptance-checklist.md). No browser test code is committed: the browser checks were one-off observations, and the automated tests are the regression safety net.
 
