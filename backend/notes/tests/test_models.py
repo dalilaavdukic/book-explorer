@@ -23,8 +23,13 @@ class NoteTestCase(TestCase):
 
 
 class NoteConstraintTests(NoteTestCase):
-    def test_database_rejects_an_out_of_range_page_or_empty_body(self):
-        for fields in [{"page": 0}, {"page": 10001}, {"body": ""}]:
+    def test_database_rejects_an_out_of_range_page_or_empty_or_too_long_body(self):
+        for fields in [
+            {"page": 0},
+            {"page": 10001},
+            {"body": ""},
+            {"body": "x" * 5001},
+        ]:
             with self.subTest(**fields):
                 with self.assertRaises(IntegrityError), transaction.atomic():
                     self.create_note(**fields)
