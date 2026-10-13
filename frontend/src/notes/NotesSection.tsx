@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import type { User } from "../api/auth.ts";
 import { ApiError } from "../api/client.ts";
 import type { Note, NoteRequest } from "../api/notes.ts";
 import { useAuth, useDraftsVersion } from "../auth/session.ts";
@@ -41,15 +42,20 @@ interface Edit {
 }
 
 export default function NotesSection({ bookId }: { bookId: number }) {
+  // Read together, so the section never renders a new reader before the key
+  // that discards the previous reader's drafts. Read below, the reader could
+  // change in a render of the section alone, ahead of its key.
+  const { user } = useAuth();
   const draftsVersion = useDraftsVersion();
   // A new key remounts the section, which discards every draft (arch §8.5).
   // React Router keeps the book page mounted when only its id changes, so the
   // key includes the book: nothing carries over between books.
-  return <BookNotes key={`${bookId}:${draftsVersion}`} bookId={bookId} />;
+  return (
+    <BookNotes key={`${bookId}:${draftsVersion}`} bookId={bookId} user={user} />
+  );
 }
 
-function BookNotes({ bookId }: { bookId: number }) {
-  const { user } = useAuth();
+function BookNotes({ bookId, user }: { bookId: number; user: User | null }) {
   const location = useLocation();
   const headingId = useId();
   const headingRef = useRef<HTMLHeadingElement>(null);
