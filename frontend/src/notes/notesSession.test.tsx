@@ -1,4 +1,4 @@
-import { focusManager } from "@tanstack/react-query";
+import { focusManager, notifyManager } from "@tanstack/react-query";
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { expect, onTestFinished, test, vi } from "vitest";
@@ -200,6 +200,38 @@ test("a re-check that finds another reader discards the draft", async () => {
   expect(form("Add a note").getByLabelText("Note")).toHaveValue("");
   expect(screen.queryByDisplayValue(/Alice/)).toBeNull();
   expect(aliceTextOnScreen()).toEqual([]);
+});
+
+test("the section never runs as a new reader before discarding the previous reader's state", async () => {
+  const { api } = await openAsAlice();
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  await screen.findByText("Page 2 of 2");
+  api.notes.splice(0, api.notes.length, ...bobNotes);
+  let sessionAnswered = false;
+  server.use(
+    http.get("/api/auth/session/", () => {
+      sessionAnswered = true;
+      return HttpResponse.json<Session>({ user: bob });
+    }),
+  );
+  refuseOtherReaders(bob);
+  // React learns of cache changes late, as on a busy machine, so the section
+  // re-renders on its own after the session has changed in the cache.
+  notifyManager.setScheduler((callback) => setTimeout(callback, 300));
+  onTestFinished(() =>
+    notifyManager.setScheduler((callback) => setTimeout(callback, 0)),
+  );
+
+  await refetchOnFocus();
+  await vi.waitFor(() => expect(sessionAnswered).toBe(true));
+  await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
+  typeInForm("Add a note", "Typed while the session changes.");
+
+  expect(
+    await screen.findByText("Bob's note.", {}, { timeout: 2000 }),
+  ).toBeInTheDocument();
+  // Bob's page 1 only: never a request as Bob from Alice's page 2.
+  expect(api.readers).toEqual(["GET 1", "GET 1", "GET 2"]);
 });
 
 test("a request refused because another reader logged in elsewhere shows that reader instead", async () => {
