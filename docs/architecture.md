@@ -555,7 +555,7 @@ A draft is the text and page in an open note form, whether creating or editing. 
 - **Keeping a draft is only for the reader whose session just ended**, so a note isn't lost to expiry. An open form with unsaved changes is rendered independently of the cached notes list, so it survives the cache clean-up.
 - **Expiry and a logout in another tab look the same from this tab** (a 401, or a re-check that finds nobody), so both keep the draft. Only a logout made in this tab is known to be deliberate.
 - **Once any reader is logged in, the previous draft is gone**, so a new reader never sees it. That includes the same reader logging in again, since AC-N12 already says a draft doesn't survive a login.
-- **Discarding is one step.** `applySession` increments a drafts counter, stored in the query cache under `['drafts']`, outside the `private` root. The notes section includes the counter in its React `key`, so the change remounts it, which resets every open form, and the notes page, to its initial state. The counter changes in the same call that removes the private entries, so no render shows a new reader next to the old draft.
+- **Discarding is one step.** `applySession` increments a drafts counter, stored in the query cache under `['drafts']`, outside the `private` root. The notes section includes the counter in its React `key`, so the change remounts it, which resets every open form, and the notes page, to its initial state. The counter changes in the same call that changes the reader and removes the private entries, and the notes section reads the reader and the counter together, passing the reader down to the part that holds the drafts. So no render of the section shows a new reader next to the old draft, or runs a request as the new reader from the old page.
 - **Only the header's logout counts as logging out in this tab.** It calls `changeSession` with `{ loggedOutHere: true }`. A 401 or a re-check passes no flag, so the session function decides from the old and new reader alone: a reader the tab wasn't showing discards the draft, and finding nobody keeps it.
 
 Rejected alternatives:
@@ -715,7 +715,7 @@ In priority order:
 
 ### 9.2 Frontend (Vitest, React Testing Library, MSW)
 
-The suite has 174 tests, aimed at behaviour that's easy to break and hard to notice by clicking around. MSW fakes the API at the network level, so the real API client, query cache and components all run in the tests.
+The suite has 175 tests, aimed at behaviour that's easy to break and hard to notice by clicking around. MSW fakes the API at the network level, so the real API client, query cache and components all run in the tests.
 
 - the API client: the CSRF header, the reader header and how errors are mapped
 - the 401 rule, including an unsaved note form surviving session expiry and the private-data clean-up (AC-N12)
@@ -858,3 +858,4 @@ There are no automated browser end-to-end tests: they would need both servers an
 **Settled after Phase 7:**
 - **Private requests name their reader** (§6.6). A review found that a window still showing one reader, after another had logged in in a second window, showed the new reader's notes under the old name and saved a note into the new reader's account. The session re-check didn't help: TanStack Query re-checks on `visibilitychange`, and two windows side by side both stay visible. Private requests now send `X-Reader-Id`, the server refuses a mismatch with 412, and the frontend re-checks the session on a 412 (§8.5).
 - **`privateQueryOptions` uses `skipToken`** rather than `enabled: false` without a reader, so its query function always has a reader to name.
+- **The notes section reads the reader where it reads the drafts counter** (§8.5). CI on a busy machine found that the inner part of the section, reading the session itself, could re-render on its own as the new reader before its parent remounted it with the new key. On Alice's page 2 it then requested Bob's page 2, and it could have shown her unsaved draft for a render. TanStack Query updates the cache at once but tells React later, so batching the session function's writes didn't help. The section now reads both in one component and passes the reader down. A test holds React's notifications back to force that order, and fails without the change.
