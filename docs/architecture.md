@@ -107,7 +107,7 @@ accounts.User 1 ──< Note >── 1 catalog.Book >── 1 Author
 | `Author` | `name`, `sort_name` | `name` is unique; `sort_name` is set explicitly, e.g. "García Márquez, Gabriel" |
 | `Genre` | `name` | `name` is unique |
 | `Book` | `title`, `author` → Author, `genre` → Genre, `publication_year`, `description` | `(title, author)` is unique; deleting an author or genre that still has books is blocked (`PROTECT`) |
-| `Note` | `user` → User, `book` → Book, `body`, `page` (optional), `created_at`, `edited_at` (optional) | Deleted with its user (`CASCADE`); deleting a book that still has notes is blocked (`PROTECT`). Check constraints: `page` is empty or 1–10,000, and `body` is not empty. Index on `(user, book, created_at)`. |
+| `Note` | `user` → User, `book` → Book, `body`, `page` (optional), `created_at`, `edited_at` (optional) | Deleted with its user (`CASCADE`); deleting a book that still has notes is blocked (`PROTECT`). Check constraints: `page` is empty or 1–10,000, and `body` is not empty and at most 5,000 characters. Index on `(user, book, created_at)`. |
 
 Why the model looks like this:
 
@@ -120,7 +120,7 @@ Why the model looks like this:
   - Cascading from a book to its notes was rejected: an admin removing a book would delete other readers' notes as a side effect, and because a note can't move to another book (spec §7), they couldn't be kept.
 - **`edited_at` instead of `updated_at`.** Django's `auto_now_add` and `auto_now` produce timestamps that differ by microseconds when a note is created, so "updated after created" would mark every new note as edited. `edited_at` stays empty until an existing note's text or page actually changes. The model sets it, so edits made in Django admin count too: saving an existing note reads its stored text and page, and sets `edited_at` to now if either differs. Comparing with the stored row costs one extra query per edit. A copy taken when the note is loaded was rejected, because it goes stale after `refresh_from_db()`.
 - **One composite index.** It matches the main notes query (one reader's notes on one book, newest first, plus the count that pagination needs), and its first two columns also answer the `has_notes` check. At this data size the benefit isn't measurable; the index is there because it fits the feature's actual access pattern.
-- **Validation in layers** (§4). Notes can be written both through the API and in admin, so the rules live on the model, with database constraints as a backstop.
+- **Validation in layers** (§4). Notes can be written both through the API and in admin, so the rules live on the model, with database constraints as a backstop. The body length needs its own constraint: a `TextField`'s `max_length` is checked only by forms and serializers, not by `full_clean()` or the database.
 - **Deleting is permanent (no soft delete).** Nothing in the spec asks for undo, a trash bin or an audit trail, and the confirmation step (AC-N5) protects against accidental deletion. Soft delete would add a "not deleted" condition to every owner-filtered query, which is exactly where authorization bugs hide. It would also go against what a reader expects when deleting a private note (J6). Django admin's change history already records admin deletions.
 
 **Seed data migration** (spec §5.2)

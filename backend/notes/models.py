@@ -2,6 +2,8 @@ from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
+from django.db.models.functions import Length
+from django.db.models.lookups import LessThanOrEqual
 from django.utils import timezone
 
 from catalog.models import Book
@@ -28,6 +30,11 @@ class Note(models.Model):
                 name="note_page_in_range",
             ),
             models.CheckConstraint(condition=~Q(body=""), name="note_body_not_empty"),
+            # A TextField's max_length is checked only by forms and serializers.
+            models.CheckConstraint(
+                condition=LessThanOrEqual(Length("body"), 5000),
+                name="note_body_max_length",
+            ),
         ]
         indexes = [
             models.Index(
