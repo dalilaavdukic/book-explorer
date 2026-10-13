@@ -1,6 +1,6 @@
 # Book Explorer: Architecture
 
-*Living document, last updated 2026-10-12 (Phase 7, the finished app). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
+*Living document, last updated 2026-10-13 (after Phase 7: private requests name their reader). Product requirements: `docs/spec.md`. Employer requirements: `Development_Take-Home_Assignment.md`.*
 
 ## 1. Purpose and status
 
@@ -191,7 +191,7 @@ Cookies are sent automatically; headers are not. Another site can't read the coo
 ### 6.4 Session lifetime
 
 - **Lifetime.** Django's default: a session lasts **2 weeks from login**, with no sliding extension.
-- **Ending a session.** Logging out deletes it on the server. Expiry and logout in another tab both surface as a 401 on the next request (J9, §6). A different reader logging in from another tab produces no 401; the tab notices when it re-checks the session (§8.5).
+- **Ending a session.** Logging out deletes it on the server. Expiry and logout in another tab both surface as a 401 on the next request (J9, §6). A different reader logging in from another tab produces no 401; the tab's next private request gets 412 instead (§6.6), or the tab notices when it re-checks the session (§8.5).
 - **No separate renewal mechanism.** Refresh tokens exist to work around JWTs that can't be extended on the server; server-side sessions don't need them.
 - **Why not sliding expiry or a short lifetime.** A sliding expiry keeps active readers logged in but costs a database write per request. A short lifetime suits high-risk data, not a reading journal. Either is a one-setting change.
 
@@ -213,6 +213,12 @@ This gives the frontend one rule: **any 401 means the reader is logged out** (§
   - An "is owner" permission check was rejected: it returns 403 (revealing that the note exists), doesn't cover lists, and would be redundant.
 - **The server decides placement.** A note's owner comes from the session and its book from the URL. Neither can be set or changed by the client (AC-N7, §5.5).
 - **Personalized results require login.** `has_notes=true` from a visitor gets 401 (AC-S3). Book data and note data are returned by separate endpoints, so public responses never contain private data.
+- **A private request names the reader it's for.** The cookie decides who the session belongs to, but a tab that hasn't noticed another reader's login elsewhere still shows the old reader (§8.5). Its requests would then read the new reader's notes under the old name, and save a note into the new reader's account.
+  - The frontend sends the reader it shows in an `X-Reader-Id` header on every notes request and every `has_notes` list.
+  - `accounts.authentication.SessionAuthentication` compares it with the session's reader, after DRF's own authentication and CSRF check. A mismatch gets **412** (`{"detail": "The session belongs to another reader."}`) and changes nothing. The tab then re-checks the session (§8.5).
+  - Without the header nothing is checked, so curl and Swagger UI work as before. A visitor sending it still gets 401.
+  - **Why 412:** 401 would tell the tab it's logged out while another reader is logged in, and 409 is the natural code for conflicting edits, should they ever be detected (§10). 412 is the code for a request whose stated condition no longer holds.
+  - **Why the server:** only the server knows whose session it is when the request arrives. A message between tabs or a check on window focus would narrow the gap, but a request sent before the tab heard would still read or write as the new reader.
 - **Staff can read notes in Django admin.** Admin access to notes is in scope (spec §3), so staff can read every reader's notes. "Readers never see each other's notes" (§1) applies to readers.
 
 | Endpoint | Visitor | Reader |
@@ -221,6 +227,8 @@ This gives the frontend one rule: **any 401 means the reader is logged out** (§
 | `GET /api/books/?has_notes=true` | 401 | 200, only books with their own notes |
 | `GET` / `POST /api/books/{id}/notes/` | 401 | 200 (paginated) / 201, own notes only |
 | `GET` / `PATCH` / `DELETE /api/notes/{id}/` | 401 | Own note: 200 / 200 / 204. Another reader's note: 404 |
+
+A reader's request to the private endpoints whose `X-Reader-Id` names someone else gets 412.
 
 ### 6.7 Auth endpoints
 
@@ -245,6 +253,7 @@ This gives the frontend one rule: **any 401 means the reader is logged out** (§
 | Faking ownership or moving notes | Owner from the session, book from the URL; request fields ignored (AC-N7) |
 | Leaking personalized results | `has_notes` requires login; public and private data in separate responses |
 | The next reader on a shared browser seeing the previous reader's cached data or unsaved draft | Private cache entries keyed by reader and removed at every authentication boundary; in-flight private requests cancelled; drafts discarded on logout and whenever a reader logs in (§8.5, AC-A8) |
+| A tab that hasn't noticed another reader's login showing that reader's notes under the old name, or saving a note into their account | Private requests name the reader the tab shows; the server refuses a mismatch with 412, and the tab re-checks the session (§6.6, §8.5) |
 | Open redirect after login | Return target passed in router state, never read from the URL (§8.6) |
 | Reusing a session after logout | Server-side session deletion (AC-A5) |
 | Oversized input or responses | Search and author search ≤ 100 characters, `page_size` ≤ 100, author `limit` ≤ 20, note body ≤ 5,000 characters. Book and note lists are paginated and author suggestions bounded; only the short genre list is returned in full. |
@@ -301,6 +310,7 @@ This gives the frontend one rule: **any 401 means the reader is logged out** (§
 | 403 | CSRF check failed |
 | 404 | Doesn't exist or isn't yours; unknown book or author; page out of range |
 | 405 | Method not supported (e.g. PUT on a note) |
+| 412 | `X-Reader-Id` names a reader other than the session's (§6.6) |
 | 415 | A request body that isn't JSON (a form, multipart or plain text) |
 | 500 | Never caused by anything the client sends (AC-S8). The one exception is in debug mode: with `DEBUG` on, more than 1,000 query parameters make Django's debug page fail, and the development server answers a plain-text 500. |
 
@@ -423,6 +433,7 @@ Pagination is chosen per endpoint, not set globally:
   - Because pagination is set per view (§7.4), the book and notes lists are documented with the paginated envelope, and author suggestions and genres as plain arrays.
   - The author `search` parameter and the author detail endpoint are documented like the others.
   - **Every error response an operation can give is documented** (§7.3), with what causes it: 401 and 403 as `Detail` (`{"detail": …}`), 404 as `Detail`, and a 400 for query parameters as `ValidationError` (a list of messages per field). A 400 for a request body is `BadRequest`, either of the two, because a body that isn't JSON gets `{"detail": …}`. 415, the JSON 404 for unknown paths, and the 400 for requests Django refuses as suspicious (§7.3) aren't repeated on every operation.
+  - **The private operations document `X-Reader-Id`** (§6.6) as an optional header, with its 412: the notes list and create, a note's read, edit and delete, and the book list, for `has_notes`.
   - The bounds are in the schema too: `page_size` from 1 to 100, and `search` up to 100 characters.
 - **Some views need annotations.** drf-spectacular can't fully work out a few hand-written pieces, so they are annotated: the auth endpoints, the custom session authentication class, the author `limit` parameter (validated in the view rather than a FilterSet), the `search` length (django-filter's `max_length` doesn't reach the schema), the `page_size` bounds, and the error responses. The error components and helpers live in `config/schema.py`.
 
@@ -468,6 +479,7 @@ frontend/src/
 A thin typed wrapper around `fetch`; no axios or generated client library. It:
 
 - sends and receives JSON on the same origin
+- names the reader the tab shows in `X-Reader-Id` when given one, which the private requests do (§6.6)
 - reads the `csrftoken` cookie on every POST, PATCH and DELETE and sets `X-CSRFToken`
 - builds query strings with `URLSearchParams`, appending one `genre` parameter per selected genre
 - passes TanStack Query's abort signal to `fetch`, so cancelling a query also stops its request (§8.5)
@@ -485,14 +497,14 @@ Each spec need below is met by TanStack Query rather than custom code:
 | Going back from a book restores the list without a reload (AC-D3) | Results are cached by their query parameters, so the list shows the cached result immediately and refreshes it quietly |
 | A slow response for an earlier search must not overwrite a later one (AC-S9, AC-S10) | Each result is stored under its own parameters; this covers the author suggestions too |
 | Note changes appear without a page reload; Save is disabled while saving (AC-N9, AC-N2) | Mutations with a pending state. Then every cached page of that book's notes is marked stale and the visible one refetched, because a create or delete shifts notes between pages (AC-N13). |
-| One place that reacts to a 401 (J9) | Global error hooks on the query and mutation caches |
+| One place that reacts to a 401 (J9) or a 412 (§6.6) | Global error hooks on the query and mutation caches |
 | A reader's private data never outlives their session (AC-A8) | Private query keys share one root, so one call cancels and removes them all (§8.5) |
 
 **Retries and refetching.**
 
 - **A 4xx response is never retried.** It won't change on a second try, and TanStack's default of three retries with backoff would hold "Book not found" and "This page doesn't exist" behind about 7 seconds of loading. A network error or a 5xx is retried once; the Retry button covers the rest.
-- **A query that failed with a 4xx isn't refetched when the tab regains focus.** A query without data shows its loading state again while it refetches, so a "not found" view would turn back into "Loading…" every time the reader returns to the tab. Every other query keeps TanStack's refetch on focus. The session query sets its own focus policy (§8.5).
-- **A view that has data keeps showing it when a background refetch fails.** The error state appears only when there's nothing to show, so a failed refetch on tab focus can't unmount the book page and an open note form with it. A 404 still shows "Book not found".
+- **A query that failed with a 4xx isn't refetched when the tab becomes visible again.** A query without data shows its loading state again while it refetches, so a "not found" view would turn back into "Loading…" every time the reader returns to the tab. Every other query keeps TanStack's refetch on focus. The session query sets its own focus policy (§8.5).
+- **A view that has data keeps showing it when a background refetch fails.** The error state appears only when there's nothing to show, so a failed refetch when the tab becomes visible can't unmount the book page and an open note form with it. A 404 still shows "Book not found".
 
 **Unexpected errors.** They all go to one function, `reportUnexpectedError` in `errorReporting.ts`. It writes to the console, and it's where an error service would be called; deployment is out of scope. Three sources reach it:
 - **Render errors.** An error boundary around the routes, inside `Layout`'s `<main>`, replaces only the page with "Something went wrong on this page.", Reload and Back to the catalog, so the header stays usable. Any navigation clears it: the boundary resets when the location's key changes while it shows its fallback, which covers going back to the catalog from a list at the same path. A second boundary around `App`, in `main.tsx`, catches the rest, such as the header or startup; its link is a plain `<a>`, because the router may be what failed. React still needs a class component for a boundary, so no dependency is added.
@@ -506,8 +518,8 @@ Hand-written `useEffect` fetching was rejected because it would mean writing req
 - **The login state is the cached result of `GET /api/auth/session/`**, stored as a TanStack Query query under `['session']`. That key is outside the `private` root, so the clean-up below never removes it.
   - Logging in, logging out and receiving a 401 all update that one value, and a `useAuth()` hook reads it.
   - **Startup.** The routes render only after the first answer arrives. Until then the app shows a brief loading state, or an error with Retry if the request fails. No component ever sees an unknown session: a logged-in reader never sees a flash of the logged-out header, and the CSRF cookie is always set before the first write. `useAuth()` throws if it's ever called before then.
-  - The session is re-checked whenever the tab regains focus. That is how a tab notices a logout or a different reader's login in another tab before its next failing request; a different reader's login never produces a 401 at all.
-  - **Query settings.** `staleTime: Infinity`, so a component calling `useAuth()` never triggers a fetch, and `refetchOnWindowFocus: "always"`, which re-checks on every focus even though the data is never stale.
+  - The session is re-checked whenever the tab becomes visible again, and after any 412. That is how a tab notices a logout or a different reader's login in another tab. A different reader's login never produces a 401; the tab's next private request gets 412 instead (§6.6).
+  - **Query settings.** `staleTime: Infinity`, so a component calling `useAuth()` never triggers a fetch, and `refetchOnWindowFocus: "always"`, which re-checks every time even though the data is never stale. TanStack Query takes that cue from `visibilitychange`, not from window focus, so two windows side by side never re-check each other; the 412 covers them.
 - **Any 401 marks the reader as logged out.** The header, the notes section and the "Books with my notes" control switch to their logged-out views (AC-A7, spec §6).
   - **Exception:** a note form with unsaved text stays on screen. It shows "Your session has expired" with a way to log in again, and keeps the text (AC-N12). A logout in this tab, or a login, discards the draft instead (below).
   - Nothing redirects automatically.
@@ -518,14 +530,15 @@ Hand-written `useEffect` fetching was rejected because it would mean writing req
 A response is *private* if it depends on who is logged in: a reader's notes, `has_notes` book lists and, had AC-X1 been built, every book list fetched by a logged-in reader, because it would carry their note counts. Everything else is *public*: book lists for visitors, book detail, authors and genres.
 
 - **Private query keys share one root and include the reader's id**, e.g. `['private', readerId, 'notes', bookId, page]`. The root lets one call find every private entry. The id means a result is only ever stored under the keys of the reader it was requested for, so the next reader's queries can't be answered from it.
-- **One function updates the session and, whenever the reader changes (including to or from nobody), runs the clean-up.** That covers logging out, logging in, any 401 (expiry, or logout in another tab), and a re-check that finds a different reader or none. The clean-up:
+- **One function updates the session and, whenever the reader changes (including to or from nobody), runs the clean-up.** That covers logging out, logging in, any 401 (expiry, or logout in another tab), and a re-check, including the one after a 412, that finds a different reader or none. The clean-up:
   1. cancels in-flight private queries; TanStack Query discards their results, so a late response can't refill the cache
   2. removes every private entry from the cache
 - **In the code** (`auth/session.ts`), that function is `applySession`, the only code that writes the session. Two callers:
   - the session query, with each answer at startup and on every re-check. An answer that arrives after its check was cancelled is dropped.
   - `changeSession`, the entry point for login, logout and any 401. It first cancels any session check still in flight. Otherwise a re-check sent just before a logout could answer with the old reader after the logout and put them back on screen.
-- **Private queries run only while a reader is logged in** (their `enabled` option depends on the session), so nothing fetches private data between a 401 and the next login.
-- **Every private query is built with `privateQueryOptions(user, key, queryFn)`**, which puts the key under the `private` root with the reader's id and sets `enabled`. Neither can be forgotten.
+- **Private queries run only while a reader is logged in** (without one, their function is TanStack's `skipToken`), so nothing fetches private data between a 401 and the next login.
+- **Every private query is built with `privateQueryOptions(user, key, queryFn)`**, which puts the key under the `private` root with the reader's id, and gives `queryFn` that reader to name in the request. None of it can be forgotten.
+- **Note changes name the reader the tab shows** when they run, read from the session in the cache. A 412 from any private request makes the cache hooks re-check the session, restarting a check already in flight, which might have been sent before the other login. When it finds another reader, the clean-up above runs, and the drafts are discarded as below.
 - **No view shows one reader's data while another's loads.** Where a view keeps previous results on screen while the next page loads, it does so only between keys of the same reader, never across readers or from private to public results.
 - **Public data stays cached.** The catalog survives a logout without reloading. More importantly, the book page stays mounted after a 401, which is what keeps an open note form on screen (AC-N12).
 
@@ -671,6 +684,7 @@ In priority order:
    - `user` and `book` fields sent in the request body are ignored.
    - The notes list's `count` and pages include only the reader's own notes: another reader's notes on the same book change neither.
    - `has_notes` returns 401 for a visitor, and `alice` and `bob` each see only their own noted books (AC-S5).
+   - A reader's request to any private endpoint that names another reader in `X-Reader-Id` gets 412 and changes nothing; naming themselves, or no one, works as before; a visitor naming a reader still gets 401 (§6.6).
    - Repeated cases use `subTest`.
 2. **Security behaviour.**
    - CSRF is tested with `APIClient(enforce_csrf_checks=True)`, because the default test client skips CSRF checks. Login, logout and note writes must fail without the token.
@@ -701,14 +715,15 @@ In priority order:
 
 ### 9.2 Frontend (Vitest, React Testing Library, MSW)
 
-The suite has 168 tests, aimed at behaviour that's easy to break and hard to notice by clicking around. MSW fakes the API at the network level, so the real API client, query cache and components all run in the tests.
+The suite has 174 tests, aimed at behaviour that's easy to break and hard to notice by clicking around. MSW fakes the API at the network level, so the real API client, query cache and components all run in the tests.
 
-- the API client: the CSRF header and how errors are mapped
+- the API client: the CSRF header, the reader header and how errors are mapped
 - the 401 rule, including an unsaved note form surviving session expiry and the private-data clean-up (AC-N12)
 - private data across authentication changes (AC-A8):
   - Alice views her notes and her `has_notes` list; a request returns 401; Bob logs in. While Bob's requests are still pending (held open in MSW), and after they finish, none of Alice's notes or results are on screen.
   - A response for Alice that arrives after the 401 doesn't reappear for Bob.
   - Alice has an unsaved note draft open; a session re-check returns Bob. The form is reset and Alice's text is nowhere on screen. Logging out with a draft open discards it too.
+  - Bob has logged in elsewhere while Alice's tab still shows her. Her next notes request, `has_notes` list or save gets 412 (the MSW handlers refuse a mismatched `X-Reader-Id` as the server does); the tab switches to Bob, nothing is saved, and none of Alice's notes or draft is on screen. Every notes request names the reader the tab shows.
   - Logging out removes private entries but keeps the public catalog cached.
 - `has_notes` being removed for visitors (AC-S3)
 - returning to page 1 when filters change, and several genres surviving a reload and back/forward as repeated parameters (AC-S5, AC-S6)
@@ -748,7 +763,7 @@ There are no automated browser end-to-end tests: they would need both servers an
 | Unsaved note text doesn't survive navigation or logging in again | A long draft can be lost after the session expires | Accepted in spec §6; the README explains it |
 | The same note edited in two places | The last save wins | Accepted in spec §3 and §6 |
 | The genre list isn't paginated | It would grow without limit if genres multiplied | Genres are a short, curated list. Authors, the list that grows with the catalog, are searched on the server with a bounded `limit` (§7.5). |
-| A tab isn't told immediately about a login or logout in another tab | Until it notices (a 401, or the session re-check when it regains focus), it keeps showing its last state, including any open draft, and its requests run with whichever session the browser now holds | The server always answers for the browser's current session, so a stale tab can't reach data that session can't. Once it notices, the clean-up runs (§8.5). Cross-tab messaging (`BroadcastChannel`) would make it immediate, but isn't needed at this scale. |
+| A tab isn't told immediately about a login or logout in another tab | Until it notices (a 401 or a 412 on its next private request, or the session re-check when it becomes visible again), it keeps showing its last state, including the previous reader's name and any open draft | Its private requests name the reader it shows, so the server refuses them once the session belongs to someone else (§6.6): it never shows or saves another reader's data under the old name. Once it notices, the clean-up runs (§8.5). Cross-tab messaging (`BroadcastChannel`) would make the switch immediate, but isn't needed at this scale. |
 | The author combobox is built by hand | Its keyboard and screen-reader behaviour is ours to get right | One small component following the WAI-ARIA combobox pattern, with a keyboard test (§9.2); not worth an autocomplete dependency |
 | Generated types are only as accurate as the schema | A wrong annotation produces wrong types | Custom pieces are annotated deliberately; CI catches a stale schema, but not a wrong annotation |
 | No production hardening | Not deployable as is | Out of scope. Deployment would need HTTPS with HSTS, `Secure` cookies, `DEBUG` off, a real `SECRET_KEY`, `ALLOWED_HOSTS`, `STATIC_ROOT` and `collectstatic` for the admin's and Swagger UI's files, a reverse proxy serving the SPA build and those files, a Content-Security-Policy, rate limiting, a periodic `clearsessions` to remove expired sessions, and `django.security` logging tuned for scanner traffic (§4). |
@@ -839,3 +854,7 @@ There are no automated browser end-to-end tests: they would need both servers an
 - **Coverage scope.** `backend/.coveragerc` leaves out the tests, the migrations, `manage.py` and the WSGI and ASGI entry points, so the README's figure measures the application code only (§9.1).
 - **AC-X2:** the author's name on a book's page is a plain `<Link>` to `/?author=<id>`, styled by the global link rule. The author selector already restores the name from the id (§8.7). AC-X1 wasn't built (decided 2026-10-12).
 - **Acceptance record.** `docs/acceptance-checklist.md` gives each criterion's method, evidence and result. The core it verified is tagged `v1.0-core`; AC-X2 was verified after it.
+
+**Settled after Phase 7:**
+- **Private requests name their reader** (§6.6). A review found that a window still showing one reader, after another had logged in in a second window, showed the new reader's notes under the old name and saved a note into the new reader's account. The session re-check didn't help: TanStack Query re-checks on `visibilitychange`, and two windows side by side both stay visible. Private requests now send `X-Reader-Id`, the server refuses a mismatch with 412, and the frontend re-checks the session on a 412 (§8.5).
+- **`privateQueryOptions` uses `skipToken`** rather than `enabled: false` without a reader, so its query function always has a reader to name.

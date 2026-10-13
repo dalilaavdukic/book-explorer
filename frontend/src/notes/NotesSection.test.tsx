@@ -449,6 +449,24 @@ test("Cancel in the delete dialog keeps the note, and Delete removes it", async 
   expect(api.notes.map(({ id }) => id)).toEqual([1]);
 });
 
+test("every notes request names the reader the tab shows", async () => {
+  const api = await openAsAlice(makeNotes(1));
+
+  typeNote("Added.");
+  fireEvent.click(addNoteButton());
+  await waitFor(() => expect(listedBodies()).toEqual(["Added.", "Note 1."]));
+  fireEvent.click(noteItem("Added.").getByRole("button", { name: "Edit" }));
+  changeEdit("Edited.");
+  fireEvent.click(editForm().getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(listedBodies()).toEqual(["Edited.", "Note 1."]));
+  confirmDelete("Edited.");
+  await waitFor(() => expect(listedBodies()).toEqual(["Note 1."]));
+
+  expect(new Set(api.readers)).toEqual(
+    new Set(["GET 1", "POST 1", "PATCH 1", "DELETE 1"]),
+  );
+});
+
 test("deleting the only note on the last page shows the page before it", async () => {
   const api = await openAsAlice(makeNotes(41));
   await goToPage(2, 3);

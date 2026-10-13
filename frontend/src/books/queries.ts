@@ -43,10 +43,13 @@ function bookListParams(state: BookListState): BookListParams {
 
 /** The one place that decides whether a book list is private (arch §8.5). */
 export function bookListQuery(user: User | null, state: BookListState) {
+  const params = bookListParams(state);
   const queryFn: QueryFunction<PaginatedBookList> = ({ signal }) =>
-    fetchBooks(bookListParams(state), signal);
+    fetchBooks(params, signal);
   return state.has_notes
-    ? privateQueryOptions(user, bookKeys.list(state), queryFn)
+    ? privateQueryOptions(user, bookKeys.list(state), ({ signal }, reader) =>
+        fetchBooks(params, signal, reader),
+      )
     : queryOptions({ queryKey: bookKeys.list(state), queryFn });
 }
 

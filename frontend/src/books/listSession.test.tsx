@@ -34,7 +34,7 @@ const notedBooks: Record<number, Book[]> = {
 /**
  * The server's session and book lists. A has_notes list holds the books of
  * whoever the session belongs to when the request arrives, as the session
- * cookie decides, whichever reader the app sent it for.
+ * cookie decides. A request naming another reader is refused with 412.
  */
 function serveCatalog(reader: User | null) {
   let gate: Promise<void> | undefined;
@@ -70,6 +70,17 @@ function serveCatalog(reader: User | null) {
       const sessionReader = reader;
       api.requests.push(params.toString());
       await gate;
+      const named = request.headers.get("X-Reader-Id");
+      if (
+        sessionReader !== null &&
+        named !== null &&
+        named !== String(sessionReader.id)
+      ) {
+        return HttpResponse.json(
+          { detail: "The session belongs to another reader." },
+          { status: 412 },
+        );
+      }
       let books = publicBooks;
       if (params.get("has_notes") === "true") {
         if (sessionReader === null) {
@@ -166,6 +177,21 @@ test("a re-check that finds another reader shows only their noted books", async 
   api.release();
   expect(
     await screen.findByRole("link", { name: "Bob's book 1" }),
+  ).toBeInTheDocument();
+  expect(aliceTextOnScreen()).toEqual([]);
+});
+
+test("a list refused because another reader logged in elsewhere shows that reader's books", async () => {
+  const api = serveCatalog(alice);
+  renderApp("/?has_notes=true", { user: alice });
+  await screen.findByRole("link", { name: "Alice's book 1" });
+  api.serveSession(bob);
+
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+  expect(await screen.findByText("bob")).toBeInTheDocument();
+  expect(
+    await screen.findByRole("link", { name: "Bob's book 13" }),
   ).toBeInTheDocument();
   expect(aliceTextOnScreen()).toEqual([]);
 });

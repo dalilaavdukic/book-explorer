@@ -1,7 +1,9 @@
 import {
   type QueryClient,
   type QueryFunction,
+  type QueryFunctionContext,
   queryOptions,
+  type SkipToken,
   skipToken,
   useQuery,
 } from "@tanstack/react-query";
@@ -94,15 +96,16 @@ export function privateKey(user: User | null, ...key: readonly unknown[]) {
   return [privateRoot, user?.id ?? null, ...key];
 }
 
-/** Options for a query that depends on who is logged in. */
+/**
+ * Options for a query that depends on who is logged in. It runs only with a
+ * reader, and its function is given that reader to name in the request.
+ */
 export function privateQueryOptions<T>(
   user: User | null,
   key: readonly unknown[],
-  queryFn: QueryFunction<T>,
+  queryFn: (context: QueryFunctionContext, reader: User) => Promise<T>,
 ) {
-  return queryOptions({
-    queryKey: privateKey(user, ...key),
-    queryFn,
-    enabled: user !== null,
-  });
+  const run: QueryFunction<T> | SkipToken =
+    user === null ? skipToken : (context) => queryFn(context, user);
+  return queryOptions({ queryKey: privateKey(user, ...key), queryFn: run });
 }

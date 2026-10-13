@@ -1,3 +1,5 @@
+import type { User } from "./auth.ts";
+
 export class ApiError extends Error {
   readonly status: number;
   /** DRF's error body, or null when the response isn't JSON. */
@@ -21,14 +23,28 @@ export class NetworkError extends Error {
 type QueryScalar = string | number;
 type QueryValue = QueryScalar | QueryScalar[] | undefined;
 
-interface GetOptions {
+interface ReaderOption {
+  /**
+   * The reader this tab shows, for a request about their private data. The
+   * server refuses it with 412 if the session now belongs to someone else.
+   */
+  reader?: User | null;
+}
+
+function readerHeaders(
+  reader: User | null | undefined,
+): Record<string, string> {
+  return reader ? { "X-Reader-Id": String(reader.id) } : {};
+}
+
+interface GetOptions extends ReaderOption {
   query?: Record<string, QueryValue>;
   signal?: AbortSignal;
 }
 
 export function apiGet<T>(
   path: string,
-  { query = {}, signal }: GetOptions = {},
+  { query = {}, signal, reader }: GetOptions = {},
 ): Promise<T> {
   const params = new URLSearchParams();
   for (const [name, value] of Object.entries(query)) {
@@ -42,12 +58,12 @@ export function apiGet<T>(
   const search = params.toString();
 
   return request<T>(search ? `${path}?${search}` : path, {
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/json", ...readerHeaders(reader) },
     signal,
   });
 }
 
-interface SendOptions {
+interface SendOptions extends ReaderOption {
   body?: unknown;
   signal?: AbortSignal;
 }
@@ -56,9 +72,12 @@ interface SendOptions {
 export function apiSend<T>(
   method: "POST" | "PATCH" | "DELETE",
   path: string,
-  { body, signal }: SendOptions = {},
+  { body, signal, reader }: SendOptions = {},
 ): Promise<T> {
-  const headers: Record<string, string> = { Accept: "application/json" };
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...readerHeaders(reader),
+  };
   // Read on every call: Django issues a new token at each login.
   const csrfToken = readCookie("csrftoken");
   if (csrfToken) {

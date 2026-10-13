@@ -130,6 +130,20 @@ test("GET sends no CSRF token", async () => {
   expect(requests[0].headers.get("X-CSRFToken")).toBeNull();
 });
 
+test("a request names the reader only when given one", async () => {
+  const requests = recordRequests("/api/things/1/");
+  const alice = { id: 1, username: "alice" };
+
+  await apiGet("/api/things/1/", { reader: alice });
+  await apiSend("PATCH", "/api/things/1/", { reader: alice });
+  await apiGet("/api/things/1/");
+  await apiSend("DELETE", "/api/things/1/", { reader: null });
+
+  expect(requests.map((request) => request.headers.get("X-Reader-Id"))).toEqual(
+    ["1", "1", null, null],
+  );
+});
+
 test("a body is sent as JSON", async () => {
   const requests = recordRequests("/api/things/");
 

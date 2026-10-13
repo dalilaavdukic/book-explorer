@@ -50,12 +50,19 @@ export function serveNotes(bookId: number, notes: Note[] = []) {
     posts: [] as unknown[],
     /** Each PATCH's body, in order. */
     patches: [] as unknown[],
+    /** Each request's method and the reader it names, as "GET 1". */
+    readers: [] as string[],
   };
   let nextId = Math.max(0, ...notes.map((note) => note.id)) + 1;
   const listPath = `/api/books/${bookId}/notes/`;
+  const recordReader = (request: Request) =>
+    api.readers.push(
+      `${request.method} ${request.headers.get("X-Reader-Id") ?? "none"}`,
+    );
 
   server.use(
     http.get(listPath, ({ request }) => {
+      recordReader(request);
       const params = new URL(request.url).searchParams;
       api.gets.push(params.toString());
       const page = Number(params.get("page") ?? 1);
@@ -73,6 +80,7 @@ export function serveNotes(bookId: number, notes: Note[] = []) {
       });
     }),
     http.post(listPath, async ({ request }) => {
+      recordReader(request);
       const body = (await request.json()) as NoteRequest;
       api.posts.push(body);
       const note = makeNote(nextId++, {
@@ -85,6 +93,7 @@ export function serveNotes(bookId: number, notes: Note[] = []) {
     http.patch<{ id: string }>(
       "/api/notes/:id/",
       async ({ params, request }) => {
+        recordReader(request);
         const body = (await request.json()) as PatchedNoteRequest;
         api.patches.push(body);
         const note = api.notes.find(({ id }) => id === Number(params.id));
@@ -101,7 +110,8 @@ export function serveNotes(bookId: number, notes: Note[] = []) {
         return HttpResponse.json(note);
       },
     ),
-    http.delete<{ id: string }>("/api/notes/:id/", ({ params }) => {
+    http.delete<{ id: string }>("/api/notes/:id/", ({ params, request }) => {
+      recordReader(request);
       const index = api.notes.findIndex(({ id }) => id === Number(params.id));
       if (index === -1) {
         return notFound();

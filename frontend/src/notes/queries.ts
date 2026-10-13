@@ -18,8 +18,11 @@ import {
 export const NOTES_PAGE_SIZE = 20;
 
 function notesQuery(user: User | null, bookId: number, page: number) {
-  return privateQueryOptions(user, ["notes", bookId, page], ({ signal }) =>
-    fetchNotes(bookId, { page, page_size: NOTES_PAGE_SIZE }, signal),
+  return privateQueryOptions(
+    user,
+    ["notes", bookId, page],
+    ({ signal }, reader) =>
+      fetchNotes(reader, bookId, { page, page_size: NOTES_PAGE_SIZE }, signal),
   );
 }
 
@@ -75,10 +78,12 @@ async function refreshIfGone(
 
 function useNoteChange<TVariables extends NoteChange, TData>(
   bookId: number,
-  mutationFn: (variables: TVariables) => Promise<TData>,
+  change: (variables: TVariables, reader: User | null) => Promise<TData>,
 ) {
   return useMutation({
-    mutationFn,
+    // Made for the reader this tab shows, which the server checks.
+    mutationFn: (variables: TVariables, { client }) =>
+      change(variables, sessionReader(client)),
     // The finished mutation keeps the note's text; it mustn't outlive the
     // section, as with the login mutation's password.
     gcTime: 0,
@@ -93,24 +98,23 @@ function useNoteChange<TVariables extends NoteChange, TData>(
 export function useCreateNote(bookId: number) {
   return useNoteChange(
     bookId,
-    ({ request }: NoteChange & { request: NoteRequest }) =>
-      createNote(bookId, request),
+    ({ request }: NoteChange & { request: NoteRequest }, reader) =>
+      createNote(reader, bookId, request),
   );
 }
 
 export function useUpdateNote(bookId: number) {
   return useNoteChange(
     bookId,
-    ({
-      id,
-      request,
-    }: NoteChange & { id: number; request: PatchedNoteRequest }) =>
-      updateNote(id, request),
+    (
+      { id, request }: NoteChange & { id: number; request: PatchedNoteRequest },
+      reader,
+    ) => updateNote(reader, id, request),
   );
 }
 
 export function useDeleteNote(bookId: number) {
-  return useNoteChange(bookId, ({ id }: NoteChange & { id: number }) =>
-    deleteNote(id),
+  return useNoteChange(bookId, ({ id }: NoteChange & { id: number }, reader) =>
+    deleteNote(reader, id),
   );
 }

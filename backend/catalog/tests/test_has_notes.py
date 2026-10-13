@@ -115,6 +115,25 @@ class ReaderHasNotesTests(HasNotesTestCase):
         self.assertNotIn("Bob's Book", titles)
         self.assertEqual(len(titles), 5)
 
+    def test_a_list_asked_for_another_reader_is_refused(self):
+        self.client.force_login(self.bob)
+
+        refused = self.client.get(
+            LIST_URL, {"has_notes": "true"}, headers={"X-Reader-Id": str(self.alice.pk)}
+        )
+        allowed = self.client.get(
+            LIST_URL, {"has_notes": "true"}, headers={"X-Reader-Id": str(self.bob.pk)}
+        )
+
+        self.assertEqual(refused.status_code, status.HTTP_412_PRECONDITION_FAILED)
+        self.assertEqual(
+            refused.json(), {"detail": "The session belongs to another reader."}
+        )
+        self.assertEqual(
+            [book["title"] for book in allowed.data["results"]],
+            ["Bob's Book", "Shared Book"],
+        )
+
     def test_combines_with_search_author_genres_and_sort(self):
         self.client.force_login(self.alice)
 

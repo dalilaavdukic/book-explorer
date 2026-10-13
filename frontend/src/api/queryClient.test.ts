@@ -1,5 +1,6 @@
 import { MutationObserver } from "@tanstack/react-query";
 import { beforeEach, expect, onTestFinished, test, vi } from "vitest";
+import { sessionKey } from "../auth/session.ts";
 import { reportUnexpectedError } from "../errorReporting.ts";
 import { ApiError, NetworkError } from "./client.ts";
 import { createQueryClient } from "./queryClient.ts";
@@ -46,4 +47,29 @@ test("an answer from the API or a lost connection isn't reported", async () => {
   await failMutation(new NetworkError(new TypeError("Failed to fetch")));
 
   expect(reportUnexpectedError).not.toHaveBeenCalled();
+});
+
+test("a 412 from a query or a mutation re-checks the session", async () => {
+  const sessionChecks = vi.fn(() => Promise.resolve(null));
+  const client = createQueryClient();
+  client.setQueryDefaults(sessionKey, { queryFn: sessionChecks });
+  await client.fetchQuery({ queryKey: sessionKey });
+  const refused = new ApiError(412, {
+    detail: "The session belongs to another reader.",
+  });
+
+  await client
+    .fetchQuery({
+      queryKey: ["probe"],
+      queryFn: () => Promise.reject(refused),
+      retry: false,
+    })
+    .catch(() => undefined);
+  await new MutationObserver(client, {
+    mutationFn: () => Promise.reject(refused),
+  })
+    .mutate()
+    .catch(() => undefined);
+
+  await vi.waitFor(() => expect(sessionChecks).toHaveBeenCalledTimes(3));
 });

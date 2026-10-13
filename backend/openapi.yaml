@@ -138,6 +138,13 @@ paths:
     get:
       operationId: books_list
       parameters:
+      - in: header
+        name: X-Reader-Id
+        schema:
+          type: integer
+        description: The id of the reader the client shows as logged in. If the session
+          belongs to another reader, the request is refused with 412. Without it,
+          nothing is checked.
       - in: query
         name: author
         schema:
@@ -234,10 +241,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/Detail'
           description: The page is past the last one.
+        '412':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: The session's reader isn't the one `X-Reader-Id` names.
   /api/books/{book_id}/notes/:
     get:
       operationId: books_notes_list
       parameters:
+      - in: header
+        name: X-Reader-Id
+        schema:
+          type: integer
+        description: The id of the reader the client shows as logged in. If the session
+          belongs to another reader, the request is refused with 412. Without it,
+          nothing is checked.
       - in: path
         name: book_id
         schema:
@@ -286,9 +306,22 @@ paths:
               schema:
                 $ref: '#/components/schemas/Detail'
           description: No such book, or the page is past the last one.
+        '412':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: The session's reader isn't the one `X-Reader-Id` names.
     post:
       operationId: books_notes_create
       parameters:
+      - in: header
+        name: X-Reader-Id
+        schema:
+          type: integer
+        description: The id of the reader the client shows as logged in. If the session
+          belongs to another reader, the request is refused with 412. Without it,
+          nothing is checked.
       - in: path
         name: book_id
         schema:
@@ -335,6 +368,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Detail'
           description: No such book.
+        '412':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: The session's reader isn't the one `X-Reader-Id` names.
   /api/books/{id}/:
     get:
       operationId: books_retrieve
@@ -383,6 +422,13 @@ paths:
     get:
       operationId: notes_retrieve
       parameters:
+      - in: header
+        name: X-Reader-Id
+        schema:
+          type: integer
+        description: The id of the reader the client shows as logged in. If the session
+          belongs to another reader, the request is refused with 412. Without it,
+          nothing is checked.
       - in: path
         name: id
         schema:
@@ -411,9 +457,22 @@ paths:
               schema:
                 $ref: '#/components/schemas/Detail'
           description: No such note among the reader's own.
+        '412':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: The session's reader isn't the one `X-Reader-Id` names.
     patch:
       operationId: notes_partial_update
       parameters:
+      - in: header
+        name: X-Reader-Id
+        schema:
+          type: integer
+        description: The id of the reader the client shows as logged in. If the session
+          belongs to another reader, the request is refused with 412. Without it,
+          nothing is checked.
       - in: path
         name: id
         schema:
@@ -459,9 +518,22 @@ paths:
               schema:
                 $ref: '#/components/schemas/Detail'
           description: No such note among the reader's own.
+        '412':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: The session's reader isn't the one `X-Reader-Id` names.
     delete:
       operationId: notes_destroy
       parameters:
+      - in: header
+        name: X-Reader-Id
+        schema:
+          type: integer
+        description: The id of the reader the client shows as logged in. If the session
+          belongs to another reader, the request is refused with 412. Without it,
+          nothing is checked.
       - in: path
         name: id
         schema:
@@ -492,6 +564,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Detail'
           description: No such note among the reader's own.
+        '412':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: The session's reader isn't the one `X-Reader-Id` names.
 components:
   schemas:
     Author:

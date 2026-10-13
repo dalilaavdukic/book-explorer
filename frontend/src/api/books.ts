@@ -1,3 +1,4 @@
+import type { User } from "./auth.ts";
 import { apiGet } from "./client.ts";
 import type { components, paths } from "./schema";
 
@@ -8,8 +9,17 @@ export type BookListParams = NonNullable<
   paths["/api/books/"]["get"]["parameters"]["query"]
 >;
 
-export function fetchBooks(params: BookListParams, signal?: AbortSignal) {
-  return apiGet<PaginatedBookList>("/api/books/", { query: params, signal });
+/** `reader` is given only for a list that depends on them (`has_notes`). */
+export function fetchBooks(
+  params: BookListParams,
+  signal?: AbortSignal,
+  reader?: User,
+) {
+  return apiGet<PaginatedBookList>("/api/books/", {
+    query: params,
+    signal,
+    reader,
+  });
 }
 
 export function fetchBook(id: number, signal?: AbortSignal) {

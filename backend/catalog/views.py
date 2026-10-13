@@ -8,7 +8,13 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny
 
 from config.pagination import StrictPageNumberPagination
-from config.schema import NOT_LOGGED_IN, detail_error, invalid_parameters
+from config.schema import (
+    NOT_LOGGED_IN,
+    READER,
+    READER_CHANGED,
+    detail_error,
+    invalid_parameters,
+)
 
 from .filters import BOOK_ORDERINGS, AuthorFilter, BookFilter
 from .models import Author, Book, Genre
@@ -27,7 +33,9 @@ class BookPagination(StrictPageNumberPagination):
     page_size = 12
 
 
+# The reader header matters only with has_notes, the one personalized result.
 @extend_schema(
+    parameters=[READER],
     responses={
         status.HTTP_200_OK: BookSerializer,
         status.HTTP_400_BAD_REQUEST: invalid_parameters(
@@ -35,7 +43,8 @@ class BookPagination(StrictPageNumberPagination):
         ),
         status.HTTP_401_UNAUTHORIZED: NOT_LOGGED_IN,
         status.HTTP_404_NOT_FOUND: detail_error("The page is past the last one."),
-    }
+        status.HTTP_412_PRECONDITION_FAILED: READER_CHANGED,
+    },
 )
 class BookListView(generics.ListAPIView):
     permission_classes = [AllowAny]
